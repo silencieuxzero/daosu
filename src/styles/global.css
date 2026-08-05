@@ -1,0 +1,340 @@
+/* ============================================================
+   DAOSU · 平面主义主题系统
+   Modern  → 黑白灰     Ancient → 黛蓝 #2E3B52（低饱和深蓝）
+   强调色   → 蓝 (代表色)
+   ============================================================ */
+
+:root {
+  --font-sans: "Helvetica Neue", Helvetica, Arial, "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-mono: "SF Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+  --line: 2px; /* 平面主义：粗实线边框 */
+}
+
+/* ---------- 主题一：现代（黑白灰） ---------- */
+[data-theme="modern"] {
+  --bg: #ffffff;
+  --bg-alt: #f1f1f1;
+  --fg: #0a0a0a;
+  --fg-muted: #6f6f6f;
+  --border: #0a0a0a;
+  --accent: var(--modern-accent, #0000e0); /* 代表色 · 蓝（值由 config.toml 注入） */
+  --accent-soft: #e6e6ff;
+  --invert-bg: #0a0a0a;
+  --invert-fg: #ffffff;
+  --grid-line: #d9d9d9;
+}
+
+/* ---------- 主题二：古代（黛蓝 · 低饱和深蓝） ---------- */
+[data-theme="ancient"] {
+  --bg: #2e3b52;
+  --bg-alt: #26344a;
+  --fg: #ede7da;
+  --fg-muted: #97a8bf;
+  --border: #ede7da;
+  --accent: var(--ancient-accent, #8aaacf); /* 黛蓝底上的强调，可由 config.toml 覆盖 */
+  --accent-soft: #34465f;
+  --invert-bg: #ede7da;
+  --invert-fg: #2e3b52;
+  --grid-line: #43536d;
+}
+
+/* 纹理总开关：config.toml [theme] enable_textures = false 时关闭全部先秦纹理 */
+[data-theme="ancient"][data-textures="off"] {
+  --texture-body: none;
+  --texture-rect: none;
+  --texture-band: none;
+  --texture-ink: transparent;
+}
+
+/* ---------- 基础 ---------- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg);
+  background-image: var(--texture-body);
+  background-size: 56px 56px;
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+a {
+  color: inherit;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+/* ---------- 平面主义通用组件 ---------- */
+.btn {
+  display: inline-block;
+  border: var(--line) solid var(--border);
+  background: transparent;
+  color: var(--fg);
+  font: 700 15px/1 var(--font-sans);
+  letter-spacing: 0.05em;
+  padding: 14px 26px;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: 0;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.btn--solid {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.btn--solid:hover {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+.btn--outline:hover {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* 等宽小标签：Swiss 风格点缀 */
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+/* 输入框 */
+.input {
+  width: 100%;
+  max-width: 320px;
+  border: var(--line) solid var(--border);
+  background: transparent;
+  color: var(--fg);
+  font: 500 15px/1 var(--font-sans);
+  padding: 12px 14px;
+  border-radius: 0;
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--accent);
+}
+
+.input::placeholder {
+  color: var(--fg-muted);
+}
+
+/* 进度条：无圆角纯色块 */
+.progress {
+  width: 100%;
+  max-width: 320px;
+  height: 14px;
+  border: var(--line) solid var(--border);
+  background: var(--bg-alt);
+  border-radius: 0;
+}
+
+.progress__bar {
+  height: 100%;
+  background: var(--accent);
+}
+
+/* 引用块 */
+.quote {
+  border-left: 6px solid var(--accent);
+  background-color: var(--bg-alt);
+  background-image: var(--texture-rect);
+  background-size: 56px 56px;
+  padding: 18px 20px;
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+/* ============================================================
+   先秦纹理（仅古代主题启用，现代主题全部为 none）
+   云雷纹/回纹 · 兽面纹 · 铭文 —— 全部 SVG data URI，零图片依赖
+   ============================================================ */
+:root {
+  --texture-body: none;
+  --texture-rect: none;
+  --texture-band: none;
+  --texture-ink: transparent;
+}
+
+[data-theme="ancient"] {
+  /* 页面整体底纹：三重回纹，极淡（灰蓝上的灰蓝） */
+  --texture-body: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'><g fill='none' stroke='%23232f43' stroke-width='2' opacity='0.5'><path d='M6 6h44v44h-44z'/><path d='M14 14h28v28h-28z'/><path d='M22 22h12v12h-12z'/></g></svg>");
+  /* 区块底纹：回纹，略深一档 */
+  --texture-rect: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'><g fill='none' stroke='%2326344a' stroke-width='2' opacity='0.55'><path d='M6 6h44v44h-44z'/><path d='M14 14h28v28h-28z'/><path d='M22 22h12v12h-12z'/></g></svg>");
+  /* 分隔条带：连续回纹，浅线（嵌线感） */
+  --texture-band: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='96' height='16' viewBox='0 0 96 16'><g fill='none' stroke='%23cfd9ea' stroke-width='1.6'><path d='M3 3h10v10h-10z'/><path d='M19 3h10v10h-10z'/><path d='M35 3h10v10h-10z'/><path d='M51 3h10v10h-10z'/><path d='M67 3h10v10h-10z'/><path d='M83 3h10v10h-10z'/></g></svg>");
+  /* 铭文水印墨色 */
+  --texture-ink: #202c3e;
+}
+
+/* ---------- 铭文水印（通用，仅古代主题显示） ---------- */
+.seal {
+  display: none;
+  position: absolute;
+  font-family: 'STKaiti', 'KaiTi', 'SimSun', 'Noto Serif SC', serif;
+  font-size: clamp(120px, 20vw, 280px);
+  font-weight: 700;
+  line-height: 0.9;
+  color: var(--texture-ink);
+  writing-mode: vertical-rl;
+  letter-spacing: 0.08em;
+  user-select: none;
+  pointer-events: none;
+  z-index: 0;
+}
+
+[data-theme='ancient'] .seal {
+  display: block;
+}
+
+/* ---------- 博客正文排版（prose） ---------- */
+.prose {
+  font-size: 16px;
+  line-height: 1.9;
+}
+
+.prose h1 {
+  font-size: clamp(26px, 4vw, 38px);
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  margin: 1.4em 0 0.6em;
+}
+
+.prose h2 {
+  font-size: clamp(21px, 3vw, 28px);
+  font-weight: 900;
+  line-height: 1.3;
+  margin: 1.8em 0 0.7em;
+  padding-bottom: 0.35em;
+  border-bottom: var(--line) solid var(--border);
+}
+
+.prose h3 {
+  font-size: clamp(17px, 2.2vw, 22px);
+  font-weight: 800;
+  margin: 1.6em 0 0.6em;
+}
+
+.prose p {
+  margin: 1em 0;
+  text-align: justify;
+}
+
+.prose a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 2px;
+}
+
+.prose strong {
+  font-weight: 800;
+}
+
+.prose ul,
+.prose ol {
+  margin: 1em 0;
+  padding-left: 1.5em;
+}
+
+.prose ul {
+  list-style: square;
+}
+
+.prose li {
+  margin: 0.45em 0;
+}
+
+.prose blockquote {
+  border-left: 6px solid var(--accent);
+  background-color: var(--bg-alt);
+  background-image: var(--texture-rect);
+  background-size: 56px 56px;
+  padding: 16px 20px;
+  margin: 1.4em 0;
+}
+
+.prose code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--bg-alt);
+  border: 1px solid var(--grid-line);
+  padding: 2px 6px;
+}
+
+.prose pre {
+  background: var(--bg-alt);
+  border: var(--line) solid var(--border);
+  padding: 16px 18px;
+  overflow-x: auto;
+  margin: 1.4em 0;
+}
+
+.prose pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.prose img {
+  border: var(--line) solid var(--border);
+  margin: 1.4em 0;
+}
+
+.prose hr {
+  border: none;
+  border-top: var(--line) solid var(--border);
+  margin: 2.2em 0;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.4em 0;
+  font-size: 15px;
+}
+
+.prose th,
+.prose td {
+  border: 1px solid var(--grid-line);
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.prose th {
+  background: var(--bg-alt);
+  font-weight: 800;
+}
+

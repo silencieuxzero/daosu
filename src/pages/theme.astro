@@ -1,0 +1,519 @@
+---
+// 主题说明页（开发文档用，不进入博客导航，可通过 /theme 访问）
+import Layout from '../layouts/Layout.astro';
+
+const themeNav = [
+	{ label: '色板', href: '#palette' },
+	{ label: '组件', href: '#components' },
+	{ label: '排版', href: '#type' },
+	{ label: '网格', href: '#grid' },
+];
+---
+
+<Layout title="主题说明 · DAOSU" nav={themeNav} showLangSwitcher={false}>
+	<main>
+		<!-- ===== Hero ===== -->
+		<section class="hero">
+			<span class="hero__seal" aria-hidden="true">鼎</span>
+			<div class="geo" aria-hidden="true">
+				<span class="geo__square"></span>
+				<span class="geo__circle"></span>
+				<span class="geo__bar"></span>
+				<span class="geo__cross"></span>
+			</div>
+
+			<p class="kicker">平面主义 · 主题系统 · 2026</p>
+			<h1 class="hero__title">
+				平面主义<br />
+				<span class="hero__title-accent">主题系统</span>
+			</h1>
+			<p class="hero__lead">
+				现代是黑白灰的骨骼，古代是黛蓝的底色。<br />
+				一套 CSS 变量，两种时代气质。点击右上角切换。
+			</p>
+			<div class="hero__actions">
+				<a class="btn btn--solid" href="#palette">查看色板</a>
+				<a class="btn btn--outline" href="#components">查看组件</a>
+			</div>
+		</section>
+
+		<!-- 先秦回纹条带（仅古代主题） -->
+		<div class="band" aria-hidden="true"></div>
+
+		<!-- ===== 01 色板 ===== -->
+		<section id="palette" class="section">
+			<h2 class="section__title"><span class="idx">01</span>主题色板</h2>
+			<p class="section__desc">以下色块跟随当前主题实时变化，数值为实际生效的 CSS 变量。</p>
+			<div class="swatches">
+				<div class="swatch" data-var="--bg">
+					<div class="swatch__chip"></div>
+					<p class="swatch__name">背景 --bg</p>
+					<code class="swatch__hex">#ffffff</code>
+				</div>
+				<div class="swatch" data-var="--bg-alt">
+					<div class="swatch__chip"></div>
+					<p class="swatch__name">次级背景 --bg-alt</p>
+					<code class="swatch__hex">#f1f1f1</code>
+				</div>
+				<div class="swatch" data-var="--fg">
+					<div class="swatch__chip"></div>
+					<p class="swatch__name">正文 --fg</p>
+					<code class="swatch__hex">#0a0a0a</code>
+				</div>
+				<div class="swatch" data-var="--fg-muted">
+					<div class="swatch__chip"></div>
+					<p class="swatch__name">弱化文字 --fg-muted</p>
+					<code class="swatch__hex">#6f6f6f</code>
+				</div>
+				<div class="swatch" data-var="--accent">
+					<div class="swatch__chip"></div>
+					<p class="swatch__name">代表色 --accent</p>
+					<code class="swatch__hex">#0000e0</code>
+				</div>
+				<div class="swatch" data-var="--invert-bg">
+					<div class="swatch__chip"></div>
+					<p class="swatch__name">反色块 --invert-bg</p>
+					<code class="swatch__hex">#0a0a0a</code>
+				</div>
+			</div>
+		</section>
+
+		<!-- ===== 02 组件 ===== -->
+		<section id="components" class="section">
+			<h2 class="section__title"><span class="idx">02</span>平面组件</h2>
+			<p class="section__desc">直角、粗边框、纯色填充、无阴影——平面主义的基本语法。</p>
+
+			<h3 class="block__title">按钮</h3>
+			<div class="row">
+				<button class="btn btn--solid" type="button">实心按钮</button>
+				<button class="btn btn--outline" type="button">描边按钮</button>
+				<button class="btn btn--outline" type="button" disabled>禁用状态</button>
+			</div>
+
+			<h3 class="block__title">标签</h3>
+			<div class="row">
+				<span class="tag">现代</span>
+				<span class="tag tag--invert">古代</span>
+				<span class="tag tag--accent">强调</span>
+			</div>
+
+			<h3 class="block__title">输入框与进度</h3>
+			<div class="row row--stack">
+				<input class="input" type="text" placeholder="输入文字…" />
+				<div class="progress" role="progressbar" aria-valuenow="68" aria-valuemin="0" aria-valuemax="100">
+					<div class="progress__bar" style="width: 68%"></div>
+				</div>
+			</div>
+
+			<h3 class="block__title">引用块</h3>
+			<blockquote class="quote">
+				设计不是装饰，而是信息的秩序。平面主义相信：去掉一切阴影，剩下的形状与颜色才真正说话。
+			</blockquote>
+		</section>
+
+		<!-- ===== 03 排版 ===== -->
+		<section id="type" class="section">
+			<h2 class="section__title"><span class="idx">03</span>排版层级</h2>
+			<div class="type-demo">
+				<h1>标题一 · 现代</h1>
+				<h2>标题二 · 黑白灰</h2>
+				<h3>标题三 · 黛蓝古意</h3>
+				<h4>标题四 · 代表蓝</h4>
+				<p class="type-demo__body">
+					正文段落。平面主义（Flat Design）源于瑞士国际主义排版风格，强调网格、留白与功能性。
+					本主题全部由 CSS 变量驱动，切换主题无需重载页面。
+				</p>
+				<p class="type-demo__mono">--accent: #0000E0; --bg: #2E3B52; /* 变量即主题 */</p>
+			</div>
+		</section>
+
+		<!-- ===== 04 网格 ===== -->
+		<section id="grid" class="section">
+			<h2 class="section__title"><span class="idx">04</span>网格与几何</h2>
+			<p class="section__desc">几何图形是平面主义的装饰语言：方块、圆、直线，仅此而已。</p>
+			<div class="grid-demo" aria-hidden="true">
+				<span class="g g--fg"></span>
+				<span class="g g--accent"></span>
+				<span class="g g--alt"></span>
+				<span class="g g--ring"></span>
+				<span class="g g--accent"></span>
+				<span class="g g--fg"></span>
+				<span class="g g--alt"></span>
+				<span class="g g--ring"></span>
+				<span class="g g--fg"></span>
+				<span class="g g--alt"></span>
+				<span class="g g--accent"></span>
+				<span class="g g--fg"></span>
+			</div>
+		</section>
+	</main>
+</Layout>
+
+<style>
+	/* ===== Hero ===== */
+	.hero {
+		position: relative;
+		padding: clamp(56px, 9vh, 110px) clamp(16px, 4vw, 48px);
+		border-bottom: var(--line) solid var(--border);
+		background-color: var(--bg);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+		overflow: hidden;
+	}
+
+	.hero__title {
+		margin: 18px 0 22px;
+		font-size: clamp(40px, 8vw, 84px);
+		font-weight: 900;
+		line-height: 1.02;
+		letter-spacing: -0.02em;
+	}
+
+	.hero__title-accent {
+		color: var(--accent);
+	}
+
+	.hero__lead {
+		font-size: clamp(15px, 1.6vw, 18px);
+		line-height: 1.8;
+		color: var(--fg-muted);
+		margin-bottom: 34px;
+	}
+
+	.hero__actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 14px;
+	}
+
+	/* 几何装饰 */
+	.geo span {
+		position: absolute;
+		display: block;
+	}
+
+	.geo__square {
+		width: 84px;
+		height: 84px;
+		background: var(--accent);
+		top: 12%;
+		right: 8%;
+		animation: geo-drift 14s ease-in-out infinite alternate;
+	}
+
+	.geo__circle {
+		width: 46px;
+		height: 46px;
+		border: 6px solid var(--fg);
+		border-radius: 50%;
+		top: 30%;
+		right: 24%;
+	}
+
+	.geo__bar {
+		width: 200px;
+		height: 14px;
+		background: var(--bg-alt);
+		border: var(--line) solid var(--border);
+		bottom: 16%;
+		right: 4%;
+	}
+
+	.geo__cross::before,
+	.geo__cross::after {
+		content: '';
+		position: absolute;
+		background: var(--fg);
+	}
+
+	.geo__cross::before {
+		width: 4px;
+		height: 90px;
+	}
+
+	.geo__cross::after {
+		width: 90px;
+		height: 4px;
+	}
+
+	.geo__cross {
+		width: 90px;
+		height: 90px;
+		top: 18%;
+		right: 40%;
+	}
+
+	@keyframes geo-drift {
+		from {
+			transform: translate(0, 0);
+		}
+		to {
+			transform: translate(-30px, 24px);
+		}
+	}
+
+	/* ===== Section 通用 ===== */
+	.section {
+		padding: clamp(48px, 7vh, 90px) clamp(16px, 4vw, 48px);
+		border-bottom: var(--line) solid var(--border);
+	}
+
+	.section__title {
+		font-size: clamp(26px, 4vw, 40px);
+		font-weight: 900;
+		letter-spacing: -0.01em;
+		margin-bottom: 12px;
+	}
+
+	.section__desc {
+		color: var(--fg-muted);
+		line-height: 1.7;
+		margin-bottom: 34px;
+	}
+
+	.idx {
+		display: inline-block;
+		margin-right: 14px;
+		padding: 6px 10px;
+		background: var(--accent);
+		color: var(--bg);
+		font-family: var(--font-mono);
+		font-size: 13px;
+		letter-spacing: 0.1em;
+		vertical-align: 4px;
+	}
+
+	.block__title {
+		margin: 34px 0 14px;
+		font-size: 15px;
+		font-weight: 700;
+		letter-spacing: 0.1em;
+	}
+
+	.row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 14px;
+	}
+
+	.row--stack {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	/* ===== 色板 ===== */
+	.swatches {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+		gap: 14px;
+	}
+
+	.swatch {
+		border: var(--line) solid var(--border);
+		padding: 12px;
+		background: var(--bg);
+	}
+
+	.swatch__chip {
+		height: 88px;
+		background: var(--chip, var(--fg));
+		border: var(--line) solid var(--border);
+		margin-bottom: 10px;
+	}
+
+	.swatch__name {
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		margin-bottom: 4px;
+	}
+
+	.swatch__hex {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		color: var(--fg-muted);
+	}
+
+	/* ===== 标签 ===== */
+	.tag {
+		display: inline-block;
+		border: var(--line) solid var(--border);
+		padding: 8px 14px;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.18em;
+	}
+
+	.tag--invert {
+		background: var(--fg);
+		color: var(--bg);
+	}
+
+	.tag--accent {
+		background: var(--accent);
+		color: var(--bg);
+		border-color: var(--accent);
+	}
+
+	/* ===== 排版演示 ===== */
+	.type-demo {
+		border: var(--line) solid var(--border);
+		padding: clamp(20px, 3vw, 40px);
+	}
+
+	.type-demo h1 {
+		font-size: clamp(30px, 4.5vw, 44px);
+		font-weight: 900;
+		margin-bottom: 10px;
+	}
+
+	.type-demo h2 {
+		font-size: clamp(24px, 3.5vw, 34px);
+		font-weight: 900;
+		margin-bottom: 10px;
+	}
+
+	.type-demo h3 {
+		font-size: clamp(20px, 2.8vw, 27px);
+		font-weight: 800;
+		margin-bottom: 10px;
+	}
+
+	.type-demo h4 {
+		font-size: clamp(17px, 2.2vw, 21px);
+		font-weight: 700;
+		color: var(--accent);
+		margin-bottom: 16px;
+	}
+
+	.type-demo__body {
+		line-height: 1.9;
+		max-width: 62ch;
+		margin-bottom: 16px;
+	}
+
+	.type-demo__mono {
+		font-family: var(--font-mono);
+		font-size: 13px;
+		background: var(--bg-alt);
+		border: var(--line) solid var(--border);
+		padding: 12px 14px;
+		color: var(--fg-muted);
+		overflow-x: auto;
+		white-space: nowrap;
+	}
+
+	/* ===== 网格演示 ===== */
+	.grid-demo {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+		gap: 12px;
+	}
+
+	.g {
+		height: 64px;
+		border: var(--line) solid var(--border);
+	}
+
+	.g--fg {
+		background: var(--fg);
+	}
+
+	.g--accent {
+		background: var(--accent);
+	}
+
+	.g--alt {
+		background: var(--bg-alt);
+	}
+
+	.g--ring {
+		background: var(--bg);
+		border-width: 6px;
+	}
+
+	/* ===== 先秦纹样（仅古代主题） ===== */
+	.hero__seal {
+		display: none;
+		position: absolute;
+		right: 5%;
+		top: 10%;
+		font-family: 'STKaiti', 'KaiTi', 'SimSun', 'Noto Serif SC', serif;
+		font-size: clamp(150px, 24vw, 330px);
+		font-weight: 700;
+		line-height: 0.9;
+		color: var(--texture-ink);
+		writing-mode: vertical-rl;
+		letter-spacing: 0.08em;
+		user-select: none;
+		pointer-events: none;
+		z-index: 0;
+	}
+
+	[data-theme='ancient'] .hero__seal {
+		display: block;
+	}
+
+	.hero > *:not(.hero__seal) {
+		position: relative;
+		z-index: 1;
+	}
+
+	/* 回纹分隔条带 */
+	.band {
+		display: none;
+		height: 14px;
+		background: var(--texture-band) repeat-x;
+		background-size: 96px 14px;
+		border-bottom: var(--line) solid var(--border);
+	}
+
+	[data-theme='ancient'] .band {
+		display: block;
+	}
+
+	/* 古代主题：器物式双线层叠 */
+	[data-theme='ancient'] .swatch,
+	[data-theme='ancient'] .type-demo,
+	[data-theme='ancient'] .quote {
+		outline: 2px solid var(--grid-line);
+		outline-offset: 4px;
+	}
+
+	/* ===== 响应式 ===== */
+	@media (max-width: 640px) {
+		.geo__cross {
+			display: none;
+		}
+	}
+</style>
+
+<script>
+	// 色板实时显示当前主题的变量值
+	const swatches = document.querySelectorAll('.swatch[data-var]');
+
+	function rgbToHex(rgb) {
+		const m = rgb.match(/\d+/g);
+		if (!m) return rgb;
+		return '#' + m
+			.slice(0, 3)
+			.map((n) => (+n).toString(16).padStart(2, '0'))
+			.join('');
+	}
+
+	function refresh() {
+		const cs = getComputedStyle(document.documentElement);
+		swatches.forEach((s) => {
+			const val = cs.getPropertyValue(s.dataset.var).trim();
+			s.querySelector('.swatch__chip').style.setProperty('--chip', val);
+			s.querySelector('.swatch__hex').textContent = rgbToHex(val);
+		});
+	}
+
+	refresh();
+	new MutationObserver(refresh).observe(document.documentElement, {
+		attributes: true,
+		attributeFilter: ['data-theme'],
+	});
+</script>

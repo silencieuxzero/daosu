@@ -1,0 +1,181 @@
+---
+// 社交链接下拉菜单（顶栏）· 平面主义风格 · 支持多语言
+import SocialIcon from './SocialIcon.astro';
+import { ui, defaultLang } from '../i18n/ui';
+import type { Lang } from '../i18n/utils';
+
+const { links = [], locale = defaultLang } = Astro.props as {
+	links?: { label: string; href: string }[];
+	locale?: Lang;
+};
+const t = ui[locale] ?? ui[defaultLang];
+---
+
+{
+	links.length > 0 && (
+		<div class="social-wrap">
+			<button
+				id="social-toggle"
+				class="social-toggle"
+				type="button"
+				aria-haspopup="true"
+				aria-expanded="false"
+			>
+				<span>{t['nav.social']}</span>
+				<span class="social-toggle__caret" aria-hidden="true">▾</span>
+			</button>
+			<ul id="social-menu" class="social-menu" hidden>
+				{
+					links.map((l) => (
+						<li>
+							<a
+								class="social-menu__item"
+								href={l.href}
+								target={l.href.startsWith('http') ? '_blank' : undefined}
+								rel={l.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+							>
+								<SocialIcon label={l.label} href={l.href} icon={l.icon} />
+								<span class="social-menu__label">{l.label}</span>
+								<span class="social-menu__arrow" aria-hidden="true">↗</span>
+							</a>
+						</li>
+					))
+				}
+			</ul>
+		</div>
+	)
+}
+
+<style>
+	.social-wrap {
+		position: relative;
+	}
+
+	.social-toggle {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 9px 12px;
+		background: var(--bg);
+		color: var(--fg);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		font: 700 12px/1 var(--font-mono);
+		letter-spacing: 0.12em;
+		cursor: pointer;
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+
+	.social-toggle:hover {
+		background: var(--fg);
+		color: var(--bg);
+	}
+
+	.social-toggle[aria-expanded='true'] {
+		background: var(--accent);
+		color: var(--bg);
+		border-color: var(--accent);
+	}
+
+	.social-toggle__caret {
+		font-size: 10px;
+		line-height: 1;
+		transition: transform 0.15s ease;
+	}
+
+	.social-toggle[aria-expanded='true'] .social-toggle__caret {
+		transform: rotate(180deg);
+	}
+
+	.social-menu {
+		position: absolute;
+		top: calc(100% + 6px);
+		right: 0;
+		min-width: 150px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		background: var(--bg);
+		border: var(--line) solid var(--border);
+		z-index: 80;
+	}
+
+	.social-menu[hidden] {
+		display: none;
+	}
+
+	.social-menu__item {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 12px 16px;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.12em;
+		text-decoration: none;
+		color: var(--fg);
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+
+	.social-menu__item + .social-menu__item {
+		border-top: 1px solid var(--grid-line);
+	}
+
+	.social-menu__item:hover {
+		background: var(--fg);
+		color: var(--bg);
+	}
+
+	.social-menu__label {
+		flex: 1;
+		min-width: 0;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.social-menu__arrow {
+		font-size: 11px;
+		opacity: 0.6;
+	}
+</style>
+
+<script>
+	// 社交下拉菜单：点击切换、外部点击关闭、Escape 关闭
+	const socialToggle = document.getElementById('social-toggle');
+	const socialMenu = document.getElementById('social-menu');
+
+	if (socialToggle && socialMenu) {
+		socialToggle.addEventListener('click', (e) => {
+			e.stopPropagation();
+			socialMenu.hidden = !socialMenu.hidden;
+			// aria-expanded 反映切换后的展开状态（收起时 false，展开时 true）
+			socialToggle.setAttribute('aria-expanded', String(!socialMenu.hidden));
+		});
+
+		// 捕获阶段监听：先于其他按钮的 stopPropagation 执行，
+		// 点击页面任意处（含其他下拉按钮/主题按钮）都先关闭本菜单
+		document.addEventListener(
+			'click',
+			(e) => {
+				if (
+					!socialMenu.hidden &&
+					!socialMenu.contains(e.target) &&
+					e.target !== socialToggle
+				) {
+					socialMenu.hidden = true;
+					socialToggle.setAttribute('aria-expanded', 'false');
+				}
+			},
+			true
+		);
+
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape' && !socialMenu.hidden) {
+				socialMenu.hidden = true;
+				socialToggle.setAttribute('aria-expanded', 'false');
+				socialToggle.focus();
+			}
+		});
+	}
+</script>

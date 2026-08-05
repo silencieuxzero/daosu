@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <rect width="1200" height="800" fill="#2e3b52"/>
+  <g fill="none" stroke="#8aaacf" stroke-width="3" opacity="0.8">
+    <rect x="100" y="100" width="400" height="400"/>
+    <rect x="160" y="160" width="280" height="280"/>
+    <rect x="220" y="220" width="160" height="160"/>
+  </g>
+  <g fill="none" stroke="#ede7da" stroke-width="4">
+    <rect x="640" y="120" width="440" height="260"/>
+    <path d="M740 180 L980 180"/>
+    <path d="M740 320 L980 320"/>
+  </g>
+  <circle cx="860" cy="460" r="90" fill="#8aaacf" opacity="0.35"/>
+  <rect x="640" y="600" width="440" height="100" fill="#ede7da"/>
+  <text x="860" y="668" font-family="serif" font-size="52" text-anchor="middle" fill="#2e3b52">鼎</text>
+</svg>

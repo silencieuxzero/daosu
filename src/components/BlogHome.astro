@@ -1,0 +1,228 @@
+---
+// 博客首页（三语共用）：站点头部 + 文章列表
+import { getCollection } from 'astro:content';
+import { ui, defaultLang } from '../i18n/ui';
+import { parsePostId, formatDate, type Lang } from '../i18n/utils';
+import { siteText } from '../lib/config';
+
+const { locale = defaultLang } = Astro.props as { locale?: Lang };
+const t = ui[locale] ?? ui[defaultLang];
+
+// 首页标题/副标题：config.toml 优先，未配置时回退内置翻译
+const heroTitle = siteText(locale, 'title') || t['home.title'];
+const heroTagline = siteText(locale, 'tagline') || t['home.desc'];
+
+// 当前语言的文章，按日期倒序
+const posts = (await getCollection('blog'))
+	.filter((post) => parsePostId(post.id).lang === locale)
+	.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+// 文章 URL：zh 无前缀，en/it 带前缀
+const postUrl = (slug: string) =>
+	locale === defaultLang ? `/blog/${slug}/` : `/${locale}/blog/${slug}/`;
+---
+
+<main>
+	<!-- ===== 站点头部 ===== -->
+	<header class="site-head">
+		<span class="seal" aria-hidden="true">文</span>
+		<p class="kicker">{t['home.kicker']}</p>
+		<h1 class="site-head__title">{heroTitle}</h1>
+		<p class="site-head__desc">{heroTagline}</p>
+		<p class="site-head__meta">{t['home.count'].replace('{n}', String(posts.length))}</p>
+	</header>
+
+	<!-- 回纹条带（仅古代主题） -->
+	<div class="band" aria-hidden="true"></div>
+
+	<!-- ===== 文章列表 ===== -->
+	<section class="post-list" aria-label="articles">
+		<h2 class="post-list__title"><span class="idx">壹</span>{t['home.posts']}</h2>
+		{
+			posts.map((post) => (
+				<article class="post">
+					<time class="post__date" datetime={post.data.date.toISOString()}>
+						{formatDate(post.data.date, locale)}
+					</time>
+					<div class="post__body">
+						<h3 class="post__title">
+							<a href={postUrl(parsePostId(post.id).slug)}>{post.data.title}</a>
+						</h3>
+						{
+							post.data.description && (
+								<p class="post__desc">{post.data.description}</p>
+							)
+						}
+						<div class="post__tags">
+							{
+								post.data.tags.map((tag) => (
+									<span class="post__tag">{tag}</span>
+								))
+							}
+						</div>
+					</div>
+				</article>
+			))
+		}
+	</section>
+</main>
+
+<style>
+	/* ===== 站点头部 ===== */
+	.site-head {
+		position: relative;
+		padding: clamp(56px, 9vh, 110px) clamp(16px, 4vw, 48px);
+		border-bottom: var(--line) solid var(--border);
+		background-color: var(--bg);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+		overflow: hidden;
+	}
+
+	.site-head__title {
+		margin: 16px 0 16px;
+		font-size: clamp(36px, 7vw, 72px);
+		font-weight: 900;
+		line-height: 1.05;
+		letter-spacing: -0.02em;
+	}
+
+	.site-head__desc {
+		max-width: 52ch;
+		font-size: clamp(14px, 1.5vw, 17px);
+		line-height: 1.8;
+		color: var(--fg-muted);
+	}
+
+	.site-head__meta {
+		margin-top: 26px;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.14em;
+		color: var(--fg-muted);
+	}
+
+	/* 铭文水印浮于内容之下 */
+	.site-head > *:not(.seal) {
+		position: relative;
+		z-index: 1;
+	}
+
+	/* ===== 回纹条带 ===== */
+	.band {
+		display: none;
+		height: 14px;
+		background: var(--texture-band) repeat-x;
+		background-size: 96px 14px;
+		border-bottom: var(--line) solid var(--border);
+	}
+
+	[data-theme='ancient'] .band {
+		display: block;
+	}
+
+	/* ===== 文章列表 ===== */
+	.post-list {
+		padding: clamp(40px, 6vh, 72px) clamp(16px, 4vw, 48px);
+	}
+
+	.post-list__title {
+		font-size: clamp(22px, 3vw, 30px);
+		font-weight: 900;
+		margin-bottom: 30px;
+	}
+
+	.idx {
+		display: inline-block;
+		margin-right: 14px;
+		padding: 6px 10px;
+		background: var(--accent);
+		color: var(--bg);
+		font-family: var(--font-mono);
+		font-size: 13px;
+		letter-spacing: 0.1em;
+		vertical-align: 4px;
+	}
+
+	/* 文章条目：日期 + 内容两栏 */
+	.post {
+		display: grid;
+		grid-template-columns: 150px 1fr;
+		gap: clamp(14px, 3vw, 36px);
+		padding: 26px 0;
+		border-top: var(--line) solid var(--border);
+	}
+
+	.post:last-child {
+		border-bottom: var(--line) solid var(--border);
+	}
+
+	.post__date {
+		font-family: var(--font-mono);
+		font-size: 13px;
+		letter-spacing: 0.08em;
+		color: var(--fg-muted);
+		padding-top: 6px;
+	}
+
+	.post__title {
+		font-size: clamp(19px, 2.6vw, 26px);
+		font-weight: 900;
+		line-height: 1.35;
+		margin-bottom: 8px;
+	}
+
+	.post__title a {
+		text-decoration: none;
+		transition: color 0.15s ease;
+	}
+
+	.post__title a:hover {
+		color: var(--accent);
+	}
+
+	.post__desc {
+		color: var(--fg-muted);
+		line-height: 1.7;
+		margin-bottom: 12px;
+	}
+
+	.post__tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+
+	.post__tag {
+		border: 1px solid var(--grid-line);
+		padding: 4px 10px;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.12em;
+		color: var(--fg-muted);
+	}
+
+	.post__tag:hover {
+		border-color: var(--accent);
+		color: var(--accent);
+	}
+
+	/* 古代主题：文章条目微回纹底 */
+	[data-theme='ancient'] .post {
+		background-color: var(--bg);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+	}
+
+	/* ===== 响应式 ===== */
+	@media (max-width: 640px) {
+		.post {
+			grid-template-columns: 1fr;
+			gap: 8px;
+		}
+
+		.post__date {
+			padding-top: 0;
+		}
+	}
+</style>

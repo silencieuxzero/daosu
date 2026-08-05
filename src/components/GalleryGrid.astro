@@ -1,0 +1,330 @@
+---
+// ============================================================
+// 画廊页（三语共用）：卡片网格 + 轻量 lightbox · 平面主义风格
+// 图片列表来自 config.toml [gallery.images]
+// ============================================================
+import { ui, defaultLang } from '../i18n/ui';
+import type { Lang } from '../i18n/utils';
+import { config } from '../lib/config';
+
+const { locale = defaultLang } = Astro.props as { locale?: Lang };
+const t = ui[locale] ?? ui[defaultLang];
+
+const images = config.gallery.images;
+---
+
+<main>
+	<!-- ===== 画廊头部 ===== -->
+	<header class="gallery-head">
+		<span class="seal" aria-hidden="true">览</span>
+		<p class="kicker">{t['gallery.kicker']}</p>
+		<h1 class="gallery-head__title">{t['gallery.title']}</h1>
+		<p class="gallery-head__desc">{t['gallery.desc']}</p>
+		<p class="gallery-head__meta">{t['gallery.count'].replace('{n}', String(images.length))}</p>
+	</header>
+
+	<!-- 回纹条带（仅古代主题） -->
+	<div class="band" aria-hidden="true"></div>
+
+	<!-- ===== 卡片网格 ===== -->
+	<section class="gallery-grid" aria-label="gallery">
+		{
+			images.map((img, i) => (
+				<figure class="gallery-card" data-index={i}>
+					<div class="gallery-card__img">
+						<img src={img.src} alt={img.alt ?? ''} loading="lazy" />
+					</div>
+					{
+						img.alt && <figcaption class="gallery-card__alt">{img.alt}</figcaption>
+					}
+				</figure>
+			))
+		}
+	</section>
+
+	<!-- ===== Lightbox ===== -->
+	<div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Gallery">
+		<button class="lightbox__close" id="lightbox-close" type="button" aria-label={t['gallery.close']}>×</button>
+		<button class="lightbox__nav lightbox__nav--prev" id="lightbox-prev" type="button" aria-label={t['gallery.prev']}>←</button>
+		<figure class="lightbox__figure">
+			<img id="lightbox-img" src="" alt="" />
+			<figcaption id="lightbox-alt" class="lightbox__alt"></figcaption>
+		</figure>
+		<button class="lightbox__nav lightbox__nav--next" id="lightbox-next" type="button" aria-label={t['gallery.next']}>→</button>
+	</div>
+</main>
+
+<style>
+	/* ===== 头部 ===== */
+	.gallery-head {
+		position: relative;
+		padding: clamp(48px, 8vh, 96px) clamp(16px, 4vw, 48px);
+		border-bottom: var(--line) solid var(--border);
+		background-color: var(--bg);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+		overflow: hidden;
+	}
+
+	.gallery-head__title {
+		margin: 16px 0 14px;
+		font-size: clamp(32px, 6vw, 60px);
+		font-weight: 900;
+		line-height: 1.05;
+		letter-spacing: -0.02em;
+	}
+
+	.gallery-head__desc {
+		max-width: 52ch;
+		font-size: clamp(14px, 1.5vw, 17px);
+		line-height: 1.8;
+		color: var(--fg-muted);
+	}
+
+	.gallery-head__meta {
+		margin-top: 24px;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.14em;
+		color: var(--fg-muted);
+	}
+
+	.gallery-head > *:not(.seal) {
+		position: relative;
+		z-index: 1;
+	}
+
+	/* 回纹条带 */
+	.band {
+		display: none;
+		height: 14px;
+		background: var(--texture-band) repeat-x;
+		background-size: 96px 14px;
+		border-bottom: var(--line) solid var(--border);
+	}
+
+	[data-theme='ancient'] .band {
+		display: block;
+	}
+
+	/* ===== 卡片网格 ===== */
+	.gallery-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+		gap: 18px;
+		padding: clamp(40px, 6vh, 72px) clamp(16px, 4vw, 48px);
+	}
+
+	.gallery-card {
+		margin: 0;
+		border: var(--line) solid var(--border);
+		background-color: var(--bg);
+		box-shadow: 5px 5px 0 0 var(--fg);
+		cursor: zoom-in;
+		transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+	}
+
+	.gallery-card:hover {
+		border-color: var(--accent);
+		box-shadow: 8px 8px 0 0 var(--accent);
+		transform: translate(-2px, -2px);
+	}
+
+	.gallery-card__img {
+		aspect-ratio: 4 / 3;
+		overflow: hidden;
+		border-bottom: var(--line) solid var(--border);
+		background: var(--bg-alt);
+	}
+
+	.gallery-card__img img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		display: block;
+	}
+
+	.gallery-card__alt {
+		padding: 10px 14px 12px;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.08em;
+		color: var(--fg-muted);
+	}
+
+	/* 古代主题：微回纹底 */
+	[data-theme='ancient'] .gallery-card {
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+	}
+
+	/* ===== Lightbox ===== */
+	.lightbox {
+		position: fixed;
+		inset: 0;
+		z-index: 120;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(10, 10, 10, 0.88);
+		cursor: zoom-out;
+	}
+
+	.lightbox[hidden] {
+		display: none;
+	}
+
+	.lightbox__figure {
+		margin: 0;
+		max-width: min(88vw, 1100px);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 14px;
+	}
+
+	.lightbox__figure img {
+		max-width: 100%;
+		max-height: 76vh;
+		border: var(--line) solid var(--border);
+		background: var(--bg);
+		box-shadow: 8px 8px 0 0 rgba(0, 0, 0, 0.55);
+	}
+
+	.lightbox__alt {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.12em;
+		color: #fff;
+	}
+
+	.lightbox__close {
+		position: absolute;
+		top: 18px;
+		right: 18px;
+		width: 40px;
+		height: 40px;
+		background: #fff;
+		color: #0a0a0a;
+		border: 2px solid #0a0a0a;
+		border-radius: 0;
+		font-size: 18px;
+		line-height: 1;
+		cursor: pointer;
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+
+	.lightbox__close:hover {
+		background: #0a0a0a;
+		color: #fff;
+	}
+
+	.lightbox__nav {
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+		width: 44px;
+		height: 44px;
+		background: #fff;
+		color: #0a0a0a;
+		border: 2px solid #0a0a0a;
+		border-radius: 0;
+		font-size: 16px;
+		cursor: pointer;
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+
+	.lightbox__nav:hover {
+		background: #0a0a0a;
+		color: #fff;
+	}
+
+	.lightbox__nav--prev {
+		left: 18px;
+	}
+
+	.lightbox__nav--next {
+		right: 18px;
+	}
+
+	/* ===== 响应式 ===== */
+	@media (max-width: 640px) {
+		.gallery-grid {
+			gap: 12px;
+			padding: 28px 12px 40px;
+			grid-template-columns: 1fr;
+		}
+
+		.lightbox__nav {
+			width: 38px;
+			height: 38px;
+			top: auto;
+			bottom: 24px;
+			transform: none;
+		}
+	}
+</style>
+
+<script define:vars={{ images }}>
+	// ============================================================
+	// Lightbox：点击卡片预览，←/→ 切换，Esc / 点击背景 / × 关闭
+	// ============================================================
+	const cards = document.querySelectorAll('.gallery-card');
+	const lightbox = document.getElementById('lightbox');
+	const lightboxImg = document.getElementById('lightbox-img');
+	const lightboxAlt = document.getElementById('lightbox-alt');
+	const closeBtn = document.getElementById('lightbox-close');
+	const prevBtn = document.getElementById('lightbox-prev');
+	const nextBtn = document.getElementById('lightbox-next');
+
+	let current = 0;
+
+	function openAt(index) {
+		if (!images.length) return;
+		current = (index + images.length) % images.length;
+		lightboxImg.src = images[current].src;
+		lightboxImg.alt = images[current].alt ?? '';
+		lightboxAlt.textContent = images[current].alt ?? '';
+		lightbox.hidden = false;
+		document.body.style.overflow = 'hidden';
+		closeBtn.focus();
+	}
+
+	function closeBox() {
+		lightbox.hidden = true;
+		lightboxImg.src = '';
+		document.body.style.overflow = '';
+	}
+
+	cards.forEach((card) => {
+		card.addEventListener('click', () => {
+			openAt(parseInt(card.dataset.index, 10));
+		});
+	});
+
+	closeBtn.addEventListener('click', (e) => {
+		e.stopPropagation();
+		closeBox();
+	});
+
+	// 点击背景（figure 之外的区域）关闭
+	lightbox.addEventListener('click', (e) => {
+		if (e.target === lightbox) closeBox();
+	});
+
+	prevBtn.addEventListener('click', (e) => {
+		e.stopPropagation();
+		openAt(current - 1);
+	});
+	nextBtn.addEventListener('click', (e) => {
+		e.stopPropagation();
+		openAt(current + 1);
+	});
+
+	document.addEventListener('keydown', (e) => {
+		if (lightbox.hidden) return;
+		if (e.key === 'Escape') closeBox();
+		if (e.key === 'ArrowLeft') openAt(current - 1);
+		if (e.key === 'ArrowRight') openAt(current + 1);
+	});
+</script>

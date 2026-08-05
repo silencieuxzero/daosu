@@ -1,0 +1,72 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { config } from '../../lib/config';
+
+const githubHref = config.profile.github.startsWith('http')
+	? config.profile.github
+	: `https://${config.profile.github}`;
+---
+
+<Layout title="About · DAOSU">
+	<main class="page">
+		<article class="prose">
+			<header class="about-head">
+				<p class="kicker">About</p>
+				<h1>About This Blog</h1>
+			</header>
+
+			<p>
+				This is the personal blog of DAOSU. It revolves around two things:
+				<strong>design</strong> and <strong>Pre-Qin antiquity</strong> — or rather,
+				a contrast between modern flat design and ancient ornament.
+			</p>
+
+			<h2>Why These Two Themes</h2>
+			<p>
+				The modern theme is black, white and grey: right angles, thick borders, flat
+				fills, no shadows — information exposed directly. The ancient theme is deep
+				slate blue (<code>#2E3B52</code>): cloud-thunder patterns on the ground, animal masks
+				at the footer, bronze inscriptions as watermarks. Both moods share the same set
+				of CSS variables; switching themes only changes a few values.
+			</p>
+
+			<h2>About Me</h2>
+			<ul>
+				<li>Flat design enthusiast, follower of the Swiss style</li>
+				<li>Long-standing interest in Shang and Zhou bronze ornament</li>
+				<li>Occasionally writes code, mostly web frontend</li>
+			</ul>
+
+			<h2>Contact</h2>
+			<p>You can reach me through the following channels:</p>
+			<ul>
+				<li>Email: <a href={`mailto:${config.profile.email}`}>{config.profile.email}</a></li>
+				<li>GitHub: <a href={githubHref} rel="nofollow">{config.profile.github}</a></li>
+			</ul>
+		</article>
+	</main>
+</Layout>
+
+<style>
+	.page {
+		padding: clamp(40px, 6vh, 72px) clamp(16px, 4vw, 48px);
+		max-width: 720px;
+		margin: 0 auto;
+	}
+
+	.about-head {
+		position: relative;
+		padding-bottom: 26px;
+		margin-bottom: 10px;
+		border-bottom: var(--line) solid var(--border);
+		background-color: var(--bg);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+	}
+
+	.about-head h1 {
+		margin-top: 14px;
+		font-size: clamp(28px, 4.5vw, 42px);
+		font-weight: 900;
+	}
+</style>

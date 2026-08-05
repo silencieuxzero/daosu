@@ -1,0 +1,33 @@
+---
+// 文章详情（中文，默认语言）
+import Layout from '../../layouts/Layout.astro';
+import PostPage from '../../components/PostPage.astro';
+import { getCollection } from 'astro:content';
+import { parsePostId } from '../../i18n/utils';
+
+export async function getStaticPaths() {
+	const all = await getCollection('blog');
+	// 构建 slug → 可用语言映射（语言切换器只显示该文章存在的语言版本）
+	const slugLangs = new Map<string, string[]>();
+	for (const post of all) {
+		const { lang, slug } = parsePostId(post.id);
+		const list = slugLangs.get(slug) ?? [];
+		list.push(lang);
+		slugLangs.set(slug, list);
+	}
+	const posts = all.filter((post) => parsePostId(post.id).lang === 'zh');
+	return posts.map((post) => {
+		const slug = parsePostId(post.id).slug;
+		return {
+			params: { slug },
+			props: { post, availableLangs: slugLangs.get(slug) ?? ['zh'] },
+		};
+	});
+}
+
+const { post, availableLangs } = Astro.props;
+---
+
+<Layout title={`${post.data.title} · DAOSU`} availableLangs={availableLangs}>
+	<PostPage post={post} locale="zh" />
+</Layout>

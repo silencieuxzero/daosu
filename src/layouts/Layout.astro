@@ -1,0 +1,612 @@
+---
+import '../styles/global.css';
+import ThemeToggle from '../components/ThemeToggle.astro';
+import MusicToggle from '../components/MusicToggle.astro';
+import SocialDropdown from '../components/SocialDropdown.astro';
+import SocialIcon from '../components/SocialIcon.astro';
+import { getLangFromUrl, localizedPath, languages, type Lang } from '../i18n/utils';
+import { ui, defaultLang } from '../i18n/ui';
+import { config } from '../lib/config';
+
+const {
+	title = `${config.site.name} · ${ui[defaultLang]['footer.type']}`,
+	nav,
+	showLangSwitcher = true,
+	availableLangs,
+} = Astro.props as {
+	title?: string;
+	nav?: { label: string; href: string }[];
+	showLangSwitcher?: boolean;
+	// 限定语言切换器可用的语言（文章页传：该文章存在的语言版本），缺省为全部
+	availableLangs?: Lang[];
+};
+
+// 当前语言（默认 zh）
+const locale: Lang = (Astro.currentLocale as Lang) ?? defaultLang;
+const t = ui[locale] ?? ui[defaultLang];
+
+// 默认导航（本地化）——仅当 config.toml 未配置 [nav] 时使用
+const defaultNav = [
+	{ label: t['nav.home'], href: localizedPath('/', locale) },
+	{ label: t['nav.archive'], href: localizedPath('/archive', locale) },
+	{ label: t['nav.about'], href: localizedPath('/about', locale) },
+];
+
+// 导航项优先级：页面显式 nav prop > config.toml [nav] > 内置默认导航
+// config 导航的站内 href 自动加语言前缀，外部链接/锚点原样使用
+const navItems =
+	nav ??
+	(config.nav.items.length > 0
+		? config.nav.items.map((item) => ({
+				label:
+					item.label ||
+					((t as Record<string, string>)[item.key ?? ''] ?? item.href),
+				href:
+					item.href.startsWith('/') && !item.href.startsWith('//')
+						? localizedPath(item.href, locale)
+						: item.href,
+		  }))
+		: defaultNav);
+
+// 语言切换链接：同路径换语言前缀；availableLangs 限定可用语言（避免指向不存在的页面）
+const currentPath = Astro.url.pathname;
+const langLinks = (Object.keys(languages) as Lang[])
+	.filter((l) => !availableLangs || availableLangs.includes(l))
+	.map((l) => ({
+		lang: l,
+		label: languages[l],
+		href: localizedPath(currentPath, l),
+		active: l === locale,
+	}));
+
+// 主题配置（来自 config.toml）
+// 注意：不能直接注入 --accent（会污染古代主题的强调色），
+// 而是注入 --modern-accent / --ancient-accent，由各主题变量组自行引用
+const themeStyle = `--modern-accent: ${config.theme.accent}; --ancient-accent: ${config.theme.ancient_accent};`;
+const textures = config.theme.enable_textures ? 'on' : 'off';
+---
+
+<!doctype html>
+<html
+	lang={locale === 'zh' ? 'zh-CN' : locale}
+	data-theme="modern"
+	data-textures={textures}
+	data-default-theme={config.theme.default}
+	style={themeStyle}
+>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" href="/favicon.ico" />
+		<meta name="generator" content={Astro.generator} />
+		<title>{title}</title>
+		<!-- 首帧前恢复主题，避免闪烁（FOUC）；默认主题来自 config.toml -->
+		<script is:inline>
+			(function () {
+				var DEFAULT_THEME =
+					document.documentElement.getAttribute('data-default-theme') || 'modern';
+				var t = localStorage.getItem('daosu-theme');
+				var theme = t === 'ancient' || t === 'modern' ? t : DEFAULT_THEME;
+				document.documentElement.setAttribute('data-theme', theme);
+			})();
+		</script>
+	</head>
+	<body>
+		<!-- ===== 顶栏 ===== -->
+		<header class="topbar">
+			<a class="brand" href={localizedPath('/', locale)}>{config.site.name}</a>
+			<div class="topbar__right">
+				<nav class="nav" aria-label="站点导航">
+					{
+						navItems.map((item) => (
+							<a href={item.href}>{item.label}</a>
+						))
+					}
+				</nav>
+				<SocialDropdown class="topbar__dropdown" links={config.social.links} locale={locale} />
+				{
+					showLangSwitcher && (
+						<div class="lang-wrap">
+							<button
+								id="lang-toggle"
+								class="lang-toggle"
+								type="button"
+								aria-haspopup="true"
+								aria-expanded="false"
+							>
+								<span id="lang-current">{languages[locale]}</span>
+								<span class="lang-toggle__caret" aria-hidden="true">▾</span>
+							</button>
+							<ul id="lang-menu" class="lang-menu" hidden>
+								{
+									langLinks.map((l) => (
+										<li>
+											<a
+												class:list={[
+													'lang-menu__item',
+													{ 'lang-menu__item--active': l.active },
+												]}
+												href={l.href}
+												lang={l.lang}
+												aria-current={l.active ? 'true' : undefined}
+											>
+												{l.label}
+											</a>
+										</li>
+									))
+								}
+							</ul>
+						</div>
+					)
+				}
+				<ThemeToggle locale={locale} />
+				<button
+					id="menu-toggle"
+					class="menu-toggle"
+					type="button"
+					aria-expanded="false"
+					aria-label={t['nav.menu']}
+				>
+					<span class="menu-toggle__bar" aria-hidden="true"></span>
+					<span class="menu-toggle__bar" aria-hidden="true"></span>
+					<span class="menu-toggle__bar" aria-hidden="true"></span>
+				</button>
+			</div>
+
+			<!-- 移动端菜单面板（<640px 显示） -->
+			<div id="mobile-menu" class="mobile-menu" hidden>
+				<nav class="mobile-menu__nav" aria-label="mobile navigation">
+					{
+						navItems.map((item) => (
+							<a class="mobile-menu__link" href={item.href}>{item.label}</a>
+						))
+					}
+				</nav>
+				{
+					showLangSwitcher && (
+						<div class="mobile-menu__section">
+							<p class="mobile-menu__label">{t['nav.language'] ?? ''}</p>
+							<div class="mobile-menu__langs">
+								{
+									langLinks.map((l) => (
+										<a
+											class:list={[
+												'mobile-menu__lang',
+												{ 'mobile-menu__lang--active': l.active },
+											]}
+											href={l.href}
+											lang={l.lang}
+										>
+											{l.label}
+										</a>
+									))
+								}
+							</div>
+						</div>
+					)
+				}
+				{
+					config.social.links.length > 0 && (
+						<div class="mobile-menu__section">
+							<p class="mobile-menu__label">{t['nav.social']}</p>
+							<div class="mobile-menu__langs">
+								{
+									config.social.links.map((l) => (
+										<a
+											class="mobile-menu__lang"
+											href={l.href}
+											target={l.href.startsWith('http') ? '_blank' : undefined}
+											rel={l.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+										>
+											<SocialIcon label={l.label} href={l.href} icon={l.icon} />
+											{l.label}
+										</a>
+									))
+								}
+							</div>
+						</div>
+					)
+				}
+			</div>
+		</header>
+
+		<slot />
+
+		<!-- ===== Footer ===== -->
+		<footer class="footer">
+			<div class="footer__row">
+				<p>© {new Date().getFullYear()} {config.site.name} · {t['footer.type']}</p>
+				<p class="footer__mono">
+					{t['footer.tagline']} · <span id="footer-theme">{t['theme.modern']}</span>
+				</p>
+			</div>
+		</footer>
+
+		<!-- ===== 全局音乐播放器 ===== -->
+		<MusicToggle locale={locale} />
+	</body>
+</html>
+
+<style>
+	/* ===== 顶栏 ===== */
+	.topbar {
+		position: sticky;
+		top: 0;
+		z-index: 50;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		flex-wrap: wrap;
+		gap: 10px 16px;
+		padding: 18px clamp(16px, 4vw, 48px);
+		background: var(--bg);
+		border-bottom: var(--line) solid var(--border);
+		transition: background-color 0.25s ease;
+	}
+
+	.brand {
+		font-size: 20px;
+		font-weight: 900;
+		letter-spacing: 0.08em;
+		text-decoration: none;
+		white-space: nowrap;
+	}
+
+	.brand sup {
+		font-size: 10px;
+		font-weight: 400;
+		color: var(--accent);
+	}
+
+	.nav {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: clamp(12px, 2.5vw, 32px);
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.14em;
+	}
+
+	.nav > a {
+		text-decoration: none;
+		color: var(--fg-muted);
+		transition: color 0.15s ease;
+	}
+
+	.nav > a:hover {
+		color: var(--accent);
+	}
+
+	.topbar__right {
+		display: flex;
+		align-items: center;
+		gap: clamp(12px, 2vw, 24px);
+	}
+
+	/* ===== 语言下拉 ===== */
+	.lang-wrap {
+		position: relative;
+	}
+
+	.lang-toggle {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 9px 12px;
+		background: var(--bg);
+		color: var(--fg);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		font: 700 12px/1 var(--font-mono);
+		letter-spacing: 0.12em;
+		cursor: pointer;
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+
+	.lang-toggle:hover {
+		background: var(--fg);
+		color: var(--bg);
+	}
+
+	.lang-toggle[aria-expanded='true'] {
+		background: var(--accent);
+		color: var(--bg);
+		border-color: var(--accent);
+	}
+
+	.lang-toggle__caret {
+		font-size: 10px;
+		line-height: 1;
+		transition: transform 0.15s ease;
+	}
+
+	.lang-toggle[aria-expanded='true'] .lang-toggle__caret {
+		transform: rotate(180deg);
+	}
+
+	.lang-menu {
+		position: absolute;
+		top: calc(100% + 6px);
+		right: 0;
+		min-width: 140px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		background: var(--bg);
+		border: var(--line) solid var(--border);
+		z-index: 80;
+	}
+
+	.lang-menu[hidden] {
+		display: none;
+	}
+
+	.lang-menu__item {
+		display: block;
+		padding: 12px 16px;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.12em;
+		text-decoration: none;
+		color: var(--fg);
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+
+	.lang-menu__item + .lang-menu__item {
+		border-top: 1px solid var(--grid-line);
+	}
+
+	.lang-menu__item:hover {
+		background: var(--fg);
+		color: var(--bg);
+	}
+
+	.lang-menu__item--active {
+		background: var(--accent);
+		color: var(--bg);
+		pointer-events: none;
+	}
+
+	/* ===== Footer ===== */
+	.footer {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 18px;
+		padding: 34px clamp(16px, 4vw, 48px);
+		background: var(--fg);
+		color: var(--bg);
+		font-size: 13px;
+	}
+
+	.footer__row {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		gap: 10px;
+		width: 100%;
+	}
+
+	.footer__mono {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.16em;
+	}
+
+	/* ===== 汉堡菜单（移动端） ===== */
+	.menu-toggle {
+		display: none;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 5px;
+		width: 42px;
+		height: 42px;
+		background: var(--bg);
+		color: var(--fg);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		cursor: pointer;
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+
+	.menu-toggle:hover {
+		background: var(--fg);
+		color: var(--bg);
+	}
+
+	.menu-toggle[aria-expanded='true'] {
+		background: var(--accent);
+		color: var(--bg);
+		border-color: var(--accent);
+	}
+
+	.menu-toggle__bar {
+		width: 18px;
+		height: 2px;
+		background: currentColor;
+		transition: transform 0.15s ease;
+	}
+
+	/* 展开时三线变 X */
+	.menu-toggle[aria-expanded='true'] .menu-toggle__bar:nth-child(1) {
+		transform: translateY(7px) rotate(45deg);
+	}
+
+	.menu-toggle[aria-expanded='true'] .menu-toggle__bar:nth-child(2) {
+		opacity: 0;
+	}
+
+	.menu-toggle[aria-expanded='true'] .menu-toggle__bar:nth-child(3) {
+		transform: translateY(-7px) rotate(-45deg);
+	}
+
+	/* 移动菜单面板 */
+	.mobile-menu {
+		display: none;
+		position: absolute;
+		top: 100%;
+		left: 0;
+		right: 0;
+		background: var(--bg);
+		border-bottom: var(--line) solid var(--border);
+		padding: 8px clamp(16px, 4vw, 48px) 24px;
+		z-index: 60;
+	}
+
+	.mobile-menu__link {
+		display: block;
+		padding: 15px 0;
+		font-size: 17px;
+		font-weight: 700;
+		text-decoration: none;
+		border-bottom: 1px solid var(--grid-line);
+		transition: color 0.15s ease;
+	}
+
+	.mobile-menu__link:hover {
+		color: var(--accent);
+	}
+
+	.mobile-menu__section {
+		margin-top: 18px;
+	}
+
+	.mobile-menu__label {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.18em;
+		color: var(--fg-muted);
+		margin-bottom: 10px;
+	}
+
+	.mobile-menu__langs {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+
+	.mobile-menu__lang {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		border: 1px solid var(--grid-line);
+		padding: 8px 14px;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.12em;
+		text-decoration: none;
+		color: var(--fg);
+		transition: border-color 0.15s ease, color 0.15s ease;
+	}
+
+	.mobile-menu__lang:hover {
+		border-color: var(--accent);
+		color: var(--accent);
+	}
+
+	.mobile-menu__lang--active {
+		background: var(--accent);
+		color: var(--bg);
+		border-color: var(--accent);
+		pointer-events: none;
+	}
+
+	/* ===== 响应式 ===== */
+	@media (max-width: 640px) {
+		.nav {
+			display: none;
+		}
+
+		/* 语言/社交下拉移入汉堡面板，顶栏隐藏 */
+		.topbar__dropdown,
+		.lang-wrap {
+			display: none;
+		}
+
+		.menu-toggle {
+			display: flex;
+		}
+
+		.mobile-menu:not([hidden]) {
+			display: block;
+		}
+	}
+</style>
+
+<script>
+	// 语言下拉菜单：点击切换、外部点击关闭、Escape 关闭
+	const langToggle = document.getElementById('lang-toggle');
+	const langMenu = document.getElementById('lang-menu');
+
+	if (langToggle && langMenu) {
+		langToggle.addEventListener('click', (e) => {
+			e.stopPropagation();
+			langMenu.hidden = !langMenu.hidden;
+			// aria-expanded 反映切换后的展开状态（收起时 false，展开时 true）
+			langToggle.setAttribute('aria-expanded', String(!langMenu.hidden));
+		});
+
+		// 捕获阶段监听：点击页面任意处（含社交/主题按钮）都先关闭本菜单
+		document.addEventListener(
+			'click',
+			(e) => {
+				if (!langMenu.hidden && !langMenu.contains(e.target) && e.target !== langToggle) {
+					langMenu.hidden = true;
+					langToggle.setAttribute('aria-expanded', 'false');
+				}
+			},
+			true
+		);
+
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape' && !langMenu.hidden) {
+				langMenu.hidden = true;
+				langToggle.setAttribute('aria-expanded', 'false');
+				langToggle.focus();
+			}
+		});
+	}
+
+	// 移动端汉堡菜单
+	const menuToggle = document.getElementById('menu-toggle');
+	const mobileMenu = document.getElementById('mobile-menu');
+
+	if (menuToggle && mobileMenu) {
+		const closeMenu = () => {
+			mobileMenu.hidden = true;
+			menuToggle.setAttribute('aria-expanded', 'false');
+		};
+
+		menuToggle.addEventListener('click', (e) => {
+			e.stopPropagation();
+			mobileMenu.hidden = !mobileMenu.hidden;
+			menuToggle.setAttribute('aria-expanded', String(!mobileMenu.hidden));
+		});
+
+		// 捕获阶段：点击面板外部任意处关闭
+		document.addEventListener(
+			'click',
+			(e) => {
+				if (!mobileMenu.hidden && !mobileMenu.contains(e.target) && e.target !== menuToggle) {
+					closeMenu();
+				}
+			},
+			true
+		);
+
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape' && !mobileMenu.hidden) {
+				closeMenu();
+				menuToggle.focus();
+			}
+		});
+
+		// 点击面板内任意链接后关闭
+		mobileMenu.addEventListener('click', (e) => {
+			if (e.target.closest('a')) closeMenu();
+		});
+	}
+</script>

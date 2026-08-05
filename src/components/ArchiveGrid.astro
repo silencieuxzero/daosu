@@ -1,0 +1,188 @@
+---
+// 归档页（三语共用）：卡片网格展示全部文章
+import { getCollection } from 'astro:content';
+import { ui, defaultLang } from '../i18n/ui';
+import { parsePostId, formatDate, type Lang } from '../i18n/utils';
+
+const { locale = defaultLang } = Astro.props as { locale?: Lang };
+const t = ui[locale] ?? ui[defaultLang];
+
+const posts = (await getCollection('blog'))
+	.filter((post) => parsePostId(post.id).lang === locale)
+	.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+const postUrl = (slug: string) =>
+	locale === defaultLang ? `/blog/${slug}/` : `/${locale}/blog/${slug}/`;
+---
+
+<main>
+	<!-- ===== 归档头部 ===== -->
+	<header class="arch-head">
+		<span class="seal" aria-hidden="true">卷</span>
+		<p class="kicker">{t['archive.kicker']}</p>
+		<h1 class="arch-head__title">{t['archive.title']}</h1>
+		<p class="arch-head__desc">{t['archive.desc']}</p>
+		<p class="arch-head__meta">{t['archive.count'].replace('{n}', String(posts.length))}</p>
+	</header>
+
+	<!-- 回纹条带（仅古代主题） -->
+	<div class="band" aria-hidden="true"></div>
+
+	<!-- ===== 卡片网格 ===== -->
+	<section class="cards" aria-label="archive">
+		{
+			posts.map((post) => (
+				<article class="card">
+					<time class="card__date" datetime={post.data.date.toISOString()}>
+						{formatDate(post.data.date, locale)}
+					</time>
+					<h2 class="card__title">
+						<a href={postUrl(parsePostId(post.id).slug)}>{post.data.title}</a>
+					</h2>
+					{
+						post.data.description && (
+							<p class="card__desc">{post.data.description}</p>
+						)
+					}
+					<div class="card__tags">
+						{
+							post.data.tags.map((tag) => (
+								<span class="card__tag">{tag}</span>
+							))
+						}
+					</div>
+				</article>
+			))
+		}
+	</section>
+</main>
+
+<style>
+	/* ===== 归档头部 ===== */
+	.arch-head {
+		position: relative;
+		padding: clamp(48px, 8vh, 96px) clamp(16px, 4vw, 48px);
+		border-bottom: var(--line) solid var(--border);
+		background-color: var(--bg);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+		overflow: hidden;
+	}
+
+	.arch-head__title {
+		margin: 16px 0 14px;
+		font-size: clamp(32px, 6vw, 60px);
+		font-weight: 900;
+		line-height: 1.05;
+		letter-spacing: -0.02em;
+	}
+
+	.arch-head__desc {
+		max-width: 52ch;
+		font-size: clamp(14px, 1.5vw, 17px);
+		line-height: 1.8;
+		color: var(--fg-muted);
+	}
+
+	.arch-head__meta {
+		margin-top: 24px;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.14em;
+		color: var(--fg-muted);
+	}
+
+	.arch-head > *:not(.seal) {
+		position: relative;
+		z-index: 1;
+	}
+
+	/* ===== 回纹条带 ===== */
+	.band {
+		display: none;
+		height: 14px;
+		background: var(--texture-band) repeat-x;
+		background-size: 96px 14px;
+		border-bottom: var(--line) solid var(--border);
+	}
+
+	[data-theme='ancient'] .band {
+		display: block;
+	}
+
+	/* ===== 卡片网格 ===== */
+	.cards {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+		gap: 16px;
+		padding: clamp(40px, 6vh, 72px) clamp(16px, 4vw, 48px);
+	}
+
+	.card {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		padding: 22px;
+		border: var(--line) solid var(--border);
+		background: var(--bg);
+		transition: border-color 0.15s ease;
+	}
+
+	.card:hover {
+		border-color: var(--accent);
+	}
+
+	.card__date {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.08em;
+		color: var(--fg-muted);
+	}
+
+	.card__title {
+		font-size: clamp(17px, 2vw, 21px);
+		font-weight: 900;
+		line-height: 1.4;
+	}
+
+	.card__title a {
+		text-decoration: none;
+		transition: color 0.15s ease;
+	}
+
+	.card__title a:hover {
+		color: var(--accent);
+	}
+
+	.card__desc {
+		flex: 1;
+		font-size: 14px;
+		line-height: 1.7;
+		color: var(--fg-muted);
+	}
+
+	.card__tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		margin-top: 4px;
+	}
+
+	.card__tag {
+		border: 1px solid var(--grid-line);
+		padding: 3px 8px;
+		font-family: var(--font-mono);
+		font-size: 10px;
+		letter-spacing: 0.12em;
+		color: var(--fg-muted);
+	}
+
+	/* 古代主题：卡片微回纹底 + 双线 outline */
+	[data-theme='ancient'] .card {
+		background-color: var(--bg);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+		outline: 2px solid var(--grid-line);
+		outline-offset: 4px;
+	}
+</style>

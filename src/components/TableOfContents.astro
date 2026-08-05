@@ -1,0 +1,309 @@
+---
+// ============================================================
+// 文章目录 · 参考 luoshulv TableOfContents 重构 · 平面主义
+// 左下角按钮展开面板；从 .prose 提取 h2-h4；
+// IntersectionObserver 高亮当前章节；点击平滑滚动
+// ============================================================
+import { ui, defaultLang } from '../i18n/ui';
+import type { Lang } from '../i18n/utils';
+
+const { locale = defaultLang } = Astro.props as { locale?: Lang };
+const t = ui[locale] ?? ui[defaultLang];
+---
+
+<div class="toc" id="toc" hidden>
+	<button class="toc__btn" id="toc-btn" type="button" aria-label={t['toc.open']} aria-expanded="false">
+		<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+			<path d="M3 6h18M3 12h18M3 18h10" />
+		</svg>
+	</button>
+
+	<div class="toc__panel" id="toc-panel">
+		<button class="toc__close" id="toc-close" type="button" aria-label={t['toc.close']}>
+			<svg viewBox="0 0 16 16" width="10" height="10" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg>
+		</button>
+		<div class="toc__head">
+			<span class="toc__dot" aria-hidden="true"></span>
+			<span class="toc__label">{t['toc.title']}</span>
+		</div>
+		<nav class="toc__nav" aria-label={t['toc.title']}>
+			<ul class="toc__list" id="toc-list"></ul>
+		</nav>
+	</div>
+</div>
+
+<style>
+	.toc {
+		position: fixed;
+		left: 20px;
+		bottom: 20px;
+		z-index: 95;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.toc[hidden] {
+		display: none;
+	}
+
+	/* 方形按钮：bg 底 + 2px 边框 + 硬投影 */
+	.toc__btn {
+		width: 52px;
+		height: 52px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--bg);
+		color: var(--fg);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		cursor: pointer;
+		box-shadow: 4px 4px 0 0 var(--fg);
+		transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+	}
+
+	.toc__btn:hover,
+	.toc__btn.is-open {
+		background: var(--fg);
+		color: var(--bg);
+		box-shadow: 2px 2px 0 0 var(--fg);
+	}
+
+	/* 面板 */
+	.toc__panel {
+		position: absolute;
+		left: 0;
+		bottom: 64px;
+		width: 260px;
+		max-height: 60vh;
+		display: flex;
+		flex-direction: column;
+		background: var(--bg);
+		border: var(--line) solid var(--border);
+		box-shadow: 6px 6px 0 0 var(--fg);
+		opacity: 0;
+		transform: translateY(8px);
+		pointer-events: none;
+		transition: opacity 0.18s ease, transform 0.18s ease;
+	}
+
+	.toc.is-open .toc__panel {
+		opacity: 1;
+		transform: translateY(0);
+		pointer-events: auto;
+	}
+
+	.toc__close {
+		position: absolute;
+		top: -1px;
+		right: -1px;
+		width: 28px;
+		height: 28px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--fg);
+		color: var(--bg);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		cursor: pointer;
+		z-index: 3;
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+
+	.toc__close:hover {
+		background: var(--accent);
+		color: var(--bg);
+		border-color: var(--accent);
+	}
+
+	.toc__head {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 14px 14px 12px;
+		border-bottom: var(--line) solid var(--border);
+	}
+
+	.toc__dot {
+		position: relative;
+		width: 12px;
+		height: 12px;
+		background: var(--accent);
+		flex: none;
+	}
+
+	.toc__dot::after {
+		content: '';
+		position: absolute;
+		inset: 2.5px;
+		background: var(--bg);
+	}
+
+	.toc__label {
+		font-size: 13px;
+		font-weight: 800;
+		letter-spacing: 0.1em;
+	}
+
+	.toc__nav {
+		overflow-y: auto;
+		padding: 8px 0;
+	}
+
+	.toc__list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	.toc__item a {
+		display: block;
+		padding: 7px 14px;
+		font-size: 13px;
+		line-height: 1.5;
+		text-decoration: none;
+		color: var(--fg-muted);
+		border-left: 3px solid transparent;
+		transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+	}
+
+	.toc__item a:hover {
+		color: var(--fg);
+		background: var(--bg-alt);
+	}
+
+	.toc__item--active a {
+		color: var(--accent);
+		border-left-color: var(--accent);
+		background: var(--bg-alt);
+	}
+
+	.toc__item--h3 a {
+		padding-left: 26px;
+	}
+
+	.toc__item--h4 a {
+		padding-left: 38px;
+	}
+
+	/* 古代主题：面板微回纹底 */
+	[data-theme='ancient'] .toc__panel {
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+	}
+
+	/* ===== 响应式 ===== */
+	@media (max-width: 640px) {
+		.toc {
+			left: 14px;
+			bottom: 14px;
+		}
+
+		.toc__btn {
+			width: 48px;
+			height: 48px;
+		}
+
+		.toc__panel {
+			bottom: 60px;
+			width: min(260px, calc(100vw - 28px));
+		}
+	}
+</style>
+
+<script define:vars={{ pt: { open: t['toc.open'], close: t['toc.close'], title: t['toc.title'] } }}>
+	// ============================================================
+	// 目录逻辑：从 .prose 提取 h2-h4，IO 高亮当前章节
+	// ============================================================
+	const wrapper = document.getElementById('toc');
+	const toggleBtn = document.getElementById('toc-btn');
+	const closeBtn = document.getElementById('toc-close');
+	const tocList = document.getElementById('toc-list');
+	const panel = document.getElementById('toc-panel');
+
+	if (!wrapper || !toggleBtn || !closeBtn || !tocList || !panel) {
+		// 组件缺失时静默
+	} else {
+		const proseEl = document.querySelector('.prose');
+		const headings = proseEl ? proseEl.querySelectorAll('h2, h3, h4') : [];
+
+		if (!proseEl || headings.length === 0) {
+			wrapper.hidden = true; // 无正文标题时整组隐藏
+		} else {
+			wrapper.hidden = false;
+
+			// 生成锚点与目录项
+			const items = [];
+			headings.forEach((heading, index) => {
+				if (!heading.id) {
+					heading.id = `toc-heading-${index}`;
+				}
+				items.push({
+					id: heading.id,
+					text: heading.textContent?.trim() || '',
+					level: parseInt(heading.tagName.charAt(1), 10),
+				});
+			});
+
+			tocList.textContent = '';
+			items.forEach((item) => {
+				const li = document.createElement('li');
+				li.className = `toc__item toc__item--h${item.level}`;
+				const a = document.createElement('a');
+				a.href = `#${item.id}`;
+				a.textContent = item.text;
+				a.addEventListener('click', (e) => {
+					e.preventDefault();
+					document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+					setOpen(false);
+				});
+				li.appendChild(a);
+				tocList.appendChild(li);
+			});
+
+			// 展开/收起
+			function setOpen(open) {
+				wrapper.classList.toggle('is-open', open);
+				toggleBtn.classList.toggle('is-open', open);
+				toggleBtn.setAttribute('aria-expanded', String(open));
+			}
+
+			toggleBtn.addEventListener('click', () => {
+				setOpen(!wrapper.classList.contains('is-open'));
+			});
+			closeBtn.addEventListener('click', () => setOpen(false));
+			document.addEventListener('click', (e) => {
+				if (wrapper.classList.contains('is-open') && !wrapper.contains(e.target)) {
+					setOpen(false);
+				}
+			});
+			document.addEventListener('keydown', (e) => {
+				if (e.key === 'Escape' && wrapper.classList.contains('is-open')) {
+					setOpen(false);
+					toggleBtn.focus();
+				}
+			});
+
+			// 高亮当前章节
+			const links = tocList.querySelectorAll('a');
+			const observer = new IntersectionObserver(
+				(entries) => {
+					entries.forEach((entry) => {
+						if (entry.isIntersecting) {
+							links.forEach((link) => {
+								link.parentElement.classList.toggle(
+									'toc__item--active',
+									link.getAttribute('href') === `#${entry.target.id}`
+								);
+							});
+						}
+					});
+				},
+				{ rootMargin: '-60px 0px -70% 0px', threshold: 0 }
+			);
+			headings.forEach((h) => observer.observe(h));
+		}
+	}
+</script>

@@ -1,0 +1,155 @@
+---
+// ============================================================
+// 沉浸阅读模式 · 参考 luoshulv ReaderToggle 重构 · 平面主义
+// 左下角按钮（位于目录按钮上方），全屏克隆正文专注阅读
+// ============================================================
+import { ui, defaultLang } from '../i18n/ui';
+import type { Lang } from '../i18n/utils';
+
+const { locale = defaultLang } = Astro.props as { locale?: Lang };
+const t = ui[locale] ?? ui[defaultLang];
+---
+
+<button class="reader" id="reader-btn" type="button" aria-label={t['reader.mode']}>
+	<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+		<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+		<path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" />
+		<path d="M8.5 7h5M8.5 11h3" />
+	</svg>
+</button>
+
+<div class="reader__overlay" id="reader-overlay" hidden role="dialog" aria-modal="true" aria-label={t['reader.mode']}>
+	<div class="reader__frame">
+		<button class="reader__close" id="reader-close" type="button" aria-label={t['reader.close']}>×</button>
+		<div class="reader__body prose" id="reader-body"></div>
+	</div>
+</div>
+
+<style>
+	.reader {
+		position: fixed;
+		left: 84px;
+		bottom: 20px;
+		z-index: 95;
+		width: 52px;
+		height: 52px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--bg);
+		color: var(--fg);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		cursor: pointer;
+		box-shadow: 4px 4px 0 0 var(--fg);
+		transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+	}
+
+	.reader:hover {
+		background: var(--fg);
+		color: var(--bg);
+		box-shadow: 2px 2px 0 0 var(--fg);
+	}
+
+	/* 全屏沉浸层 */
+	.reader__overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 130;
+		overflow-y: auto;
+		background: var(--bg);
+	}
+
+	.reader__overlay[hidden] {
+		display: none;
+	}
+
+	.reader__frame {
+		max-width: 760px;
+		margin: 0 auto;
+		padding: 72px clamp(20px, 5vw, 48px) 96px;
+	}
+
+	.reader__close {
+		position: fixed;
+		top: 20px;
+		right: 20px;
+		width: 40px;
+		height: 40px;
+		background: var(--fg);
+		color: var(--bg);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		font-size: 16px;
+		line-height: 1;
+		cursor: pointer;
+		z-index: 2;
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+
+	.reader__close:hover {
+		background: var(--accent);
+		color: var(--bg);
+		border-color: var(--accent);
+	}
+
+	.reader__body {
+		font-size: 17px;
+	}
+
+	/* ===== 响应式 ===== */
+	@media (max-width: 640px) {
+		.reader {
+			left: 70px;
+			bottom: 14px;
+			width: 48px;
+			height: 48px;
+		}
+	}
+</style>
+
+<script define:vars={{ pt: { mode: t['reader.mode'], close: t['reader.close'] } }}>
+	// ============================================================
+	// 沉浸阅读：克隆 .prose 正文到全屏层
+	// ============================================================
+	const readerBtn = document.getElementById('reader-btn');
+	const overlay = document.getElementById('reader-overlay');
+	const closeBtn = document.getElementById('reader-close');
+	const readerBody = document.getElementById('reader-body');
+
+	if (readerBtn && overlay && closeBtn && readerBody) {
+		const proseEl = document.querySelector('.prose');
+
+		function openReader() {
+			if (!proseEl) return;
+			// 克隆正文（含文章头部与内容）
+			readerBody.textContent = '';
+			readerBody.appendChild(proseEl.cloneNode(true));
+			overlay.hidden = false;
+			document.body.style.overflow = 'hidden';
+			overlay.scrollTop = 0;
+			closeBtn.focus();
+		}
+
+		function closeReader() {
+			overlay.hidden = true;
+			readerBody.textContent = '';
+			document.body.style.overflow = '';
+		}
+
+		readerBtn.addEventListener('click', openReader);
+		closeBtn.addEventListener('click', closeReader);
+		overlay.addEventListener('click', (e) => {
+			if (e.target === overlay) closeReader();
+		});
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape' && !overlay.hidden) {
+				closeReader();
+				readerBtn.focus();
+			}
+		});
+
+		// 无正文（非文章页）时隐藏按钮
+		if (!proseEl) readerBtn.hidden = true;
+	}
+</script>

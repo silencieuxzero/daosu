@@ -1,11 +1,10 @@
 ---
 // ============================================================
 // 社交平台图标 · 线性几何风格 · currentColor
-// icon 由 config.toml 配置（bilibili/github/email/rss/x/telegram/youtube/link）
+// icon 由 config.mjs 配置（bilibili/github/email/rss/x/telegram/youtube/link）
 // 未配置时按 href 自动识别（bilibili.com / github.com / mailto:），兜底 link
 // ============================================================
-const { label = '', href = '', icon } = Astro.props as {
-	label?: string;
+const { href = '', icon } = Astro.props as {
 	href?: string;
 	icon?: string;
 };

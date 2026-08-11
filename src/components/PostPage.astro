@@ -14,12 +14,15 @@ const { post, locale = defaultLang } = Astro.props as {
 const t = ui[locale] ?? ui[defaultLang];
 const { Content } = await render(post);
 
-// 作者信息（来自 config.toml）
+// 作者信息（来自 config.mjs）
 const authorName = config.profile.author || config.site.name;
 const githubHref = config.profile.github.startsWith('http')
 	? config.profile.github
 	: `https://${config.profile.github}`;
 ---
+
+<!-- ===== 阅读进度条（顶部 3px 指示） ===== -->
+<div class="reading-progress" id="reading-progress" aria-hidden="true"></div>
 
 <main class="page">
 	<article class="prose">
@@ -34,7 +37,7 @@ const githubHref = config.profile.github.startsWith('http')
 			}
 			<div class="post-head__tags">
 				{
-					post.data.tags.map((tag) => (
+					post.data.tags.map((tag: string) => (
 						<span class="post-head__tag">{tag}</span>
 					))
 				}
@@ -79,6 +82,18 @@ const githubHref = config.profile.github.startsWith('http')
 <ReaderMode locale={locale} />
 
 <style>
+	/* ===== 阅读进度条 ===== */
+	.reading-progress {
+		position: fixed;
+		top: 0;
+		left: 0;
+		height: 3px;
+		width: 0;
+		background: var(--accent);
+		z-index: 70;
+		pointer-events: none;
+	}
+
 	.page {
 		padding: clamp(40px, 6vh, 72px) clamp(16px, 4vw, 48px);
 		max-width: 820px;
@@ -240,6 +255,32 @@ const githubHref = config.profile.github.startsWith('http')
 
 <script define:vars={{ pt: { expand: t['code.expand'], collapse: t['code.collapse'] } }}>
 	// ============================================================
+	// 阅读进度条：顶部 3px accent 条，随滚动填充
+	// ============================================================
+	const progress = document.getElementById('reading-progress');
+	if (progress) {
+		let ticking = false;
+		const update = () => {
+			const doc = document.documentElement;
+			const max = doc.scrollHeight - doc.clientHeight;
+			const pct = max > 0 ? (window.scrollY / max) * 100 : 0;
+			progress.style.width = pct + '%';
+			ticking = false;
+		};
+		window.addEventListener(
+			'scroll',
+			() => {
+				if (!ticking) {
+					ticking = true;
+					requestAnimationFrame(update);
+				}
+			},
+			{ passive: true }
+		);
+		update();
+	}
+
+	// ============================================================
 	// 代码块折叠：包一层标题栏（语言 + 行数 + 按钮），>15 行默认折叠
 	// ============================================================
 	const FOLD_THRESHOLD = 15;
@@ -255,7 +296,8 @@ const githubHref = config.profile.github.startsWith('http')
 
 		// 行数：Shiki .line 计数，回退换行统计
 		const lineEls = code.querySelectorAll('.line');
-		const lines = lineEls.length || pre.textContent.split('\n').length;
+		const textLines = pre.textContent.trim() ? pre.textContent.trim().split('\n') : [];
+		const lines = lineEls.length || textLines.length;
 
 		// 包 wrapper
 		const wrapper = document.createElement('div');

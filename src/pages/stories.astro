@@ -1,0 +1,264 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { config } from '../lib/config';
+import { getCollection } from 'astro:content';
+import { formatDate, defaultLang } from '../i18n/utils';
+
+// 茶馆故事索引：来自 src/content/stories/*.md，按 order 排序
+const stories = (await getCollection('stories')).sort(
+	(a, b) => a.data.order - b.data.order
+);
+
+const fmt = (d?: Date) => (d ? formatDate(d, defaultLang) : '');
+---
+
+<Layout title={`茶馆故事 · ${config.site.name}`}>
+	<main class="page">
+		<header class="sec-head">
+			<span class="seal" aria-hidden="true">故</span>
+			<p class="kicker">茶馆故事 · 2026</p>
+			<h1>茶馆故事</h1>
+			<p class="sec-head__desc">
+				茶馆里听来的故事。真真假假，围炉夜话。已收录 {stories.length} 篇。
+			</p>
+		</header>
+
+		<!-- 回纹条带（仅古代主题） -->
+		<div class="band" aria-hidden="true"></div>
+
+		<!-- ===== 故事列表 ===== -->
+		{
+			stories.length === 0 ? (
+				<section class="empty">
+					<span class="empty__mark" aria-hidden="true">话</span>
+					<p class="empty__title">还没有故事</p>
+					<p class="empty__desc">这个栏目正在整理，稍后来坐坐。</p>
+				</section>
+			) : (
+				<section class="story-list" aria-label="故事列表">
+					{
+						stories.map((story, i) => (
+							<article class="story">
+								<div class="story__side">
+									<p class="story__idx">{String(i + 1).padStart(2, '0')}</p>
+									<p class="story__meta">
+										{story.data.author && <span>{story.data.author}</span>}
+										{story.data.date && <span>{fmt(story.data.date)}</span>}
+									</p>
+								</div>
+								<div class="story__body">
+									<h2 class="story__title">
+										<a href={`/stories/${story.id}/`}>{story.data.title}</a>
+									</h2>
+									{
+										story.data.description && (
+											<p class="story__desc">{story.data.description}</p>
+										)
+									}
+									{
+										story.data.tags.length > 0 && (
+											<div class="story__tags">
+												{
+													story.data.tags.map((tag) => (
+														<span class="story__tag">{tag}</span>
+													))
+												}
+											</div>
+										)
+									}
+								</div>
+							</article>
+						))
+					}
+				</section>
+			)
+		}
+	</main>
+</Layout>
+
+<style>
+	.page {
+		padding: clamp(40px, 6vh, 72px) clamp(16px, 4vw, 48px);
+		max-width: 860px;
+		margin: 0 auto;
+	}
+
+	.sec-head {
+		position: relative;
+		padding-bottom: 26px;
+		border-bottom: var(--line) solid var(--border);
+		background-color: var(--bg);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+	}
+
+	.sec-head h1 {
+		margin: 16px 0 14px;
+		font-size: clamp(32px, 6vw, 56px);
+		font-weight: 900;
+		line-height: 1.05;
+		letter-spacing: -0.02em;
+	}
+
+	.sec-head__desc {
+		max-width: 52ch;
+		font-size: clamp(14px, 1.5vw, 17px);
+		line-height: 1.8;
+		color: var(--fg-muted);
+	}
+
+	.sec-head > *:not(.seal) {
+		position: relative;
+		z-index: 1;
+	}
+
+	.band {
+		display: none;
+		height: 14px;
+		background: var(--texture-band) repeat-x;
+		background-size: 96px 14px;
+		border-bottom: var(--line) solid var(--border);
+	}
+
+	[data-theme='ancient'] .band {
+		display: block;
+	}
+
+	/* ===== 故事列表（日期/作者 + 内容两栏，同首页文章行） ===== */
+	.story-list {
+		margin-top: clamp(36px, 5vh, 56px);
+	}
+
+	.story {
+		display: grid;
+		grid-template-columns: 170px 1fr;
+		gap: clamp(14px, 3vw, 36px);
+		padding: 26px 0;
+		border-top: var(--line) solid var(--border);
+		transition: background-color 0.15s ease;
+	}
+
+	.story:last-child {
+		border-bottom: var(--line) solid var(--border);
+	}
+
+	.story:hover {
+		background-color: var(--bg-alt);
+	}
+
+	.story__side {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+
+	.story__idx {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.16em;
+		color: var(--accent);
+		transition: color 0.15s ease;
+	}
+
+	.story:hover .story__idx {
+		color: var(--accent);
+	}
+
+	.story__meta {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.08em;
+		color: var(--fg-muted);
+		transition: color 0.15s ease;
+	}
+
+	.story:hover .story__meta {
+		color: var(--accent);
+	}
+
+	.story__title {
+		font-size: clamp(19px, 2.6vw, 26px);
+		font-weight: 900;
+		line-height: 1.35;
+		margin-bottom: 8px;
+	}
+
+	.story__title a {
+		text-decoration: none;
+		transition: color 0.15s ease;
+	}
+
+	.story:hover .story__title a {
+		color: var(--accent);
+	}
+
+	.story__desc {
+		color: var(--fg-muted);
+		line-height: 1.7;
+		margin-bottom: 12px;
+	}
+
+	.story__tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+
+	.story__tag {
+		border: 1px solid var(--grid-line);
+		padding: 4px 10px;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.12em;
+		color: var(--fg-muted);
+	}
+
+	/* ===== 空状态 ===== */
+	.empty {
+		margin-top: clamp(40px, 6vh, 72px);
+		padding: clamp(36px, 5vw, 64px) 24px;
+		border: var(--line) solid var(--border);
+		background-color: var(--bg);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+		text-align: center;
+	}
+
+	.empty__mark {
+		display: inline-block;
+		margin-bottom: 18px;
+		width: 52px;
+		height: 52px;
+		line-height: 52px;
+		font-family: 'STKaiti', 'KaiTi', 'SimSun', 'Noto Serif SC', serif;
+		font-size: 30px;
+		font-weight: 700;
+		color: var(--bg);
+		background: var(--accent);
+	}
+
+	.empty__title {
+		font-size: clamp(19px, 2.5vw, 24px);
+		font-weight: 900;
+		letter-spacing: 0.06em;
+		margin-bottom: 10px;
+	}
+
+	.empty__desc {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.14em;
+		color: var(--fg-muted);
+	}
+
+	/* ===== 响应式 ===== */
+	@media (max-width: 640px) {
+		.story {
+			grid-template-columns: 1fr;
+			gap: 8px;
+		}
+	}
+</style>

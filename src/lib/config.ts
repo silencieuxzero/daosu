@@ -1,73 +1,9 @@
 // ============================================================
-// 站点配置加载器：读取根目录 config.toml，缺失键回退默认值
-// 注：rolldown 不支持 .toml import，故用 fs 读取 + 轻量解析
+// 站点配置加载器：读取根目录 config.mjs，缺失键回退默认值
 // ============================================================
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import rawModule from '../../config.mjs';
 
-/** 轻量 TOML 解析：注释、[section] / [a.b] 嵌套表、[[array.table]] 数组表、字符串/布尔/数字/数组 */
-function parseToml(src: string): any {
-	const root: any = {};
-	let current: any = root;
-
-	for (const raw of src.split(/\r?\n/)) {
-		const line = raw.trim();
-		if (!line || line.startsWith('#')) continue;
-
-		// [[a.b.c]] 数组表：创建/追加数组元素
-		const arrSec = line.match(/^\[\[([^\]]+)\]\]/);
-		if (arrSec) {
-			const parts = arrSec[1].split('.');
-			let parent: any = root;
-			for (const p of parts.slice(0, -1)) {
-				if (!parent[p] || typeof parent[p] !== 'object') parent[p] = {};
-				parent = parent[p];
-			}
-			const key = parts[parts.length - 1];
-			if (!Array.isArray(parent[key])) parent[key] = [];
-			const obj: any = {};
-			parent[key].push(obj);
-			current = obj;
-			continue;
-		}
-
-		// [section] / [a.b] 嵌套表
-		const sec = line.match(/^\[([^\]]+)\]/);
-		if (sec) {
-			current = root;
-			for (const p of sec[1].split('.')) {
-				if (!current[p] || typeof current[p] !== 'object') current[p] = {};
-				current = current[p];
-			}
-			continue;
-		}
-
-		const kv = line.match(/^([A-Za-z0-9_-]+)\s*=\s*(.+)$/);
-		if (!kv) continue;
-		current[kv[1]] = parseValue(kv[2]);
-	}
-	return root;
-}
-
-function parseValue(raw: string): any {
-	const v = raw.trim();
-	if (v.length >= 2 && (v.startsWith('"') || v.startsWith("'")) && v.endsWith(v[0])) {
-		return v.slice(1, -1);
-	}
-	if (v === 'true') return true;
-	if (v === 'false') return false;
-	if (/^-?\d+(\.\d+)?$/.test(v)) return Number(v);
-	if (v.startsWith('[') && v.endsWith(']')) {
-		return v
-			.slice(1, -1)
-			.split(',')
-			.map((s) => parseValue(s.trim()))
-			.filter((x) => x !== '');
-	}
-	return v;
-}
-
-const raw: any = parseToml(readFileSync(join(process.cwd(), 'config.toml'), 'utf-8'));
+const raw: any = rawModule;
 
 export interface SiteConfig {
 	site: {
@@ -82,6 +18,11 @@ export interface SiteConfig {
 	};
 	nav: {
 		items: { key?: string; label?: string; href: string }[];
+		groups: {
+			label: string;
+			locales?: string[];
+			items: { label: string; href: string }[];
+		}[];
 	};
 	social: {
 		links: { label: string; href: string; icon?: string }[];
@@ -97,6 +38,13 @@ export interface SiteConfig {
 		accent: string;
 		ancient_accent: string;
 		enable_textures: boolean;
+	};
+	decor: {
+		home: string;
+	};
+	preface: {
+		title: Record<string, string>;
+		text: Record<string, string>;
 	};
 }
 
@@ -122,6 +70,19 @@ export const config: SiteConfig = {
 			? raw.nav.items
 					.filter((i: any) => i && typeof i.href === 'string')
 					.map((i: any) => ({ key: i.key, label: i.label, href: i.href }))
+			: [],
+		groups: Array.isArray(raw.nav?.groups)
+			? raw.nav.groups
+					.filter((g: any) => g && typeof g.label === 'string' && Array.isArray(g.items))
+					.map((g: any) => ({
+						label: g.label,
+						locales: Array.isArray(g.locales)
+							? g.locales.filter((x: any) => typeof x === 'string')
+							: undefined,
+						items: g.items
+							.filter((i: any) => i && typeof i.label === 'string' && typeof i.href === 'string')
+							.map((i: any) => ({ label: i.label, href: i.href })),
+					}))
 			: [],
 	},
 	social: {
@@ -151,6 +112,19 @@ export const config: SiteConfig = {
 						alt: typeof x.alt === 'string' ? x.alt : undefined,
 					}))
 			: [],
+	},
+	decor: {
+		home: typeof raw.decor?.home === 'string' ? raw.decor.home : 'swiss',
+	},
+	preface: {
+		title:
+			raw.preface?.title && typeof raw.preface.title === 'object'
+				? raw.preface.title
+				: {},
+		text:
+			raw.preface?.text && typeof raw.preface.text === 'object'
+				? raw.preface.text
+				: {},
 	},
 };
 

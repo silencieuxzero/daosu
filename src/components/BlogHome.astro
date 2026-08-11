@@ -1,67 +1,79 @@
 ---
-// 博客首页（三语共用）：站点头部 + 文章列表
-import { getCollection } from 'astro:content';
+// 博客首页（三语共用）：站点头部 + 前言板块（不展示文章列表，文章在 /archive）
 import { ui, defaultLang } from '../i18n/ui';
-import { parsePostId, formatDate, type Lang } from '../i18n/utils';
-import { siteText } from '../lib/config';
+import { type Lang } from '../i18n/utils';
+import { config, siteText } from '../lib/config';
 
 const { locale = defaultLang } = Astro.props as { locale?: Lang };
 const t = ui[locale] ?? ui[defaultLang];
 
-// 首页标题/副标题：config.toml 优先，未配置时回退内置翻译
+// 首页标题/副标题：config.mjs 优先，未配置时回退内置翻译
 const heroTitle = siteText(locale, 'title') || t['home.title'];
 const heroTagline = siteText(locale, 'tagline') || t['home.desc'];
 
-// 当前语言的文章，按日期倒序
-const posts = (await getCollection('blog'))
-	.filter((post) => parsePostId(post.id).lang === locale)
-	.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+// 前言板块：config.mjs [preface] 优先，未配置时回退内置翻译
+const prefaceTitle = config.preface.title[locale] || t['home.preface.title'];
+const prefaceText = config.preface.text[locale] || t['home.preface.text'];
+// 多段落支持：按空行分段渲染
+const prefaceParas = prefaceText.split(/\n\s*\n/).filter((p) => p.trim());
 
-// 文章 URL：zh 无前缀，en/it 带前缀
-const postUrl = (slug: string) =>
-	locale === defaultLang ? `/blog/${slug}/` : `/${locale}/blog/${slug}/`;
+// 几何装饰预设（config.mjs [decor.home]：swiss / rings / cross / minimal / off）
+const decorName = config.decor.home;
 ---
 
 <main>
 	<!-- ===== 站点头部 ===== -->
 	<header class="site-head">
 		<span class="seal" aria-hidden="true">文</span>
+		{
+			decorName !== 'off' && (
+				<div class:list={['geo', `geo--${decorName}`]} aria-hidden="true">
+					{
+						decorName === 'swiss' && (
+							<>
+								<span class="geo__square"></span>
+								<span class="geo__circle"></span>
+								<span class="geo__bar"></span>
+							</>
+						)
+					}
+					{
+						decorName === 'rings' && (
+							<>
+								<span class="geo__ring geo__ring--a"></span>
+								<span class="geo__ring geo__ring--b"></span>
+								<span class="geo__dot"></span>
+							</>
+						)
+					}
+					{
+						decorName === 'cross' && (
+							<>
+								<span class="geo__cross"></span>
+								<span class="geo__square"></span>
+							</>
+						)
+					}
+					{
+						decorName === 'minimal' && <span class="geo__square"></span>
+					}
+				</div>
+			)
+		}
 		<p class="kicker">{t['home.kicker']}</p>
 		<h1 class="site-head__title">{heroTitle}</h1>
 		<p class="site-head__desc">{heroTagline}</p>
-		<p class="site-head__meta">{t['home.count'].replace('{n}', String(posts.length))}</p>
 	</header>
 
 	<!-- 回纹条带（仅古代主题） -->
 	<div class="band" aria-hidden="true"></div>
 
-	<!-- ===== 文章列表 ===== -->
-	<section class="post-list" aria-label="articles">
-		<h2 class="post-list__title"><span class="idx">壹</span>{t['home.posts']}</h2>
+	<!-- ===== 前言 ===== -->
+	<section class="preface" aria-label={prefaceTitle}>
+		<h2 class="preface__title"><span class="idx">{prefaceTitle}</span></h2>
 		{
-			posts.map((post) => (
-				<article class="post">
-					<time class="post__date" datetime={post.data.date.toISOString()}>
-						{formatDate(post.data.date, locale)}
-					</time>
-					<div class="post__body">
-						<h3 class="post__title">
-							<a href={postUrl(parsePostId(post.id).slug)}>{post.data.title}</a>
-						</h3>
-						{
-							post.data.description && (
-								<p class="post__desc">{post.data.description}</p>
-							)
-						}
-						<div class="post__tags">
-							{
-								post.data.tags.map((tag) => (
-									<span class="post__tag">{tag}</span>
-								))
-							}
-						</div>
-					</div>
-				</article>
+			prefaceParas.map((para) => (
+				<p class="preface__text">{para}</p>
 			))
 		}
 	</section>
@@ -79,6 +91,131 @@ const postUrl = (slug: string) =>
 		overflow: hidden;
 	}
 
+	/* ===== 几何装饰（config.mjs [decor.home] 预设切换） ===== */
+	.geo span {
+		position: absolute;
+		display: block;
+	}
+
+	/* --- swiss：方块 / 圆环 / 横条（默认） --- */
+	.geo__square {
+		width: 56px;
+		height: 56px;
+		background: var(--accent);
+		top: 22%;
+		right: 7%;
+	}
+
+	.geo__circle {
+		width: 34px;
+		height: 34px;
+		border: 5px solid var(--fg);
+		border-radius: 50%;
+		top: 16%;
+		right: 20%;
+	}
+
+	.geo__bar {
+		width: 140px;
+		height: 10px;
+		background: var(--bg-alt);
+		border: var(--line) solid var(--border);
+		bottom: 18%;
+		right: 4%;
+	}
+
+	/* --- rings：同心圆 + 实心点 --- */
+	.geo--rings .geo__ring--a {
+		width: 110px;
+		height: 110px;
+		border: 6px solid var(--accent);
+		border-radius: 50%;
+		top: 14%;
+		right: 6%;
+	}
+
+	.geo--rings .geo__ring--b {
+		width: 64px;
+		height: 64px;
+		border: 4px solid var(--fg);
+		border-radius: 50%;
+		top: 32%;
+		right: 21%;
+	}
+
+	.geo--rings .geo__dot {
+		width: 14px;
+		height: 14px;
+		background: var(--accent);
+		top: 52%;
+		right: 12%;
+	}
+
+	/* --- cross：十字 + 方块 --- */
+	.geo--cross .geo__cross {
+		position: absolute;
+		width: 90px;
+		height: 90px;
+		top: 16%;
+		right: 8%;
+	}
+
+	.geo--cross .geo__cross::before,
+	.geo--cross .geo__cross::after {
+		content: '';
+		position: absolute;
+		background: var(--fg);
+	}
+
+	.geo--cross .geo__cross::before {
+		width: 4px;
+		height: 90px;
+		left: 43px;
+		top: 0;
+	}
+
+	.geo--cross .geo__cross::after {
+		width: 90px;
+		height: 4px;
+		left: 0;
+		top: 43px;
+	}
+
+	.geo--cross .geo__square {
+		width: 34px;
+		height: 34px;
+		background: var(--accent);
+		top: 56%;
+		right: 20%;
+	}
+
+	/* --- minimal：单方块 --- */
+	.geo--minimal .geo__square {
+		width: 48px;
+		height: 48px;
+		background: var(--accent);
+		top: 24%;
+		right: 8%;
+	}
+
+	@media (max-width: 640px) {
+		.geo__circle {
+			display: none;
+		}
+
+		.geo__bar {
+			width: 90px;
+		}
+
+		.geo--rings .geo__ring--b {
+			display: none;
+		}
+
+		.geo--cross .geo__square {
+			display: none;
+		}
+	}
+
 	.site-head__title {
 		margin: 16px 0 16px;
 		font-size: clamp(36px, 7vw, 72px);
@@ -91,14 +228,6 @@ const postUrl = (slug: string) =>
 		max-width: 52ch;
 		font-size: clamp(14px, 1.5vw, 17px);
 		line-height: 1.8;
-		color: var(--fg-muted);
-	}
-
-	.site-head__meta {
-		margin-top: 26px;
-		font-family: var(--font-mono);
-		font-size: 12px;
-		letter-spacing: 0.14em;
 		color: var(--fg-muted);
 	}
 
@@ -121,108 +250,43 @@ const postUrl = (slug: string) =>
 		display: block;
 	}
 
-	/* ===== 文章列表 ===== */
-	.post-list {
-		padding: clamp(40px, 6vh, 72px) clamp(16px, 4vw, 48px);
+	/* ===== 前言 ===== */
+	.preface {
+		padding: clamp(56px, 8vh, 96px) clamp(16px, 4vw, 48px);
+		border-bottom: var(--line) solid var(--border);
+		background-color: var(--bg);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
 	}
 
-	.post-list__title {
-		font-size: clamp(22px, 3vw, 30px);
-		font-weight: 900;
-		margin-bottom: 30px;
+	.preface__title {
+		margin-bottom: clamp(20px, 3vh, 32px);
 	}
 
 	.idx {
 		display: inline-block;
-		margin-right: 14px;
 		padding: 6px 10px;
 		background: var(--accent);
 		color: var(--bg);
 		font-family: var(--font-mono);
 		font-size: 13px;
 		letter-spacing: 0.1em;
-		vertical-align: 4px;
 	}
 
-	/* 文章条目：日期 + 内容两栏 */
-	.post {
-		display: grid;
-		grid-template-columns: 150px 1fr;
-		gap: clamp(14px, 3vw, 36px);
-		padding: 26px 0;
-		border-top: var(--line) solid var(--border);
+	.preface__text {
+		max-width: 58ch;
+		margin: 0 0 1.2em;
+		font-family: 'STKaiti', 'KaiTi', 'SimSun', 'Noto Serif SC', serif;
+		font-size: clamp(16px, 2vw, 19px);
+		line-height: 2;
+		color: var(--fg);
 	}
 
-	.post:last-child {
-		border-bottom: var(--line) solid var(--border);
+	.preface__text:first-of-type {
+		margin-top: 0;
 	}
 
-	.post__date {
-		font-family: var(--font-mono);
-		font-size: 13px;
-		letter-spacing: 0.08em;
-		color: var(--fg-muted);
-		padding-top: 6px;
-	}
-
-	.post__title {
-		font-size: clamp(19px, 2.6vw, 26px);
-		font-weight: 900;
-		line-height: 1.35;
-		margin-bottom: 8px;
-	}
-
-	.post__title a {
-		text-decoration: none;
-		transition: color 0.15s ease;
-	}
-
-	.post__title a:hover {
-		color: var(--accent);
-	}
-
-	.post__desc {
-		color: var(--fg-muted);
-		line-height: 1.7;
-		margin-bottom: 12px;
-	}
-
-	.post__tags {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 8px;
-	}
-
-	.post__tag {
-		border: 1px solid var(--grid-line);
-		padding: 4px 10px;
-		font-family: var(--font-mono);
-		font-size: 11px;
-		letter-spacing: 0.12em;
-		color: var(--fg-muted);
-	}
-
-	.post__tag:hover {
-		border-color: var(--accent);
-		color: var(--accent);
-	}
-
-	/* 古代主题：文章条目微回纹底 */
-	[data-theme='ancient'] .post {
-		background-color: var(--bg);
-		background-image: var(--texture-rect);
-		background-size: 56px 56px;
-	}
-
-	/* ===== 响应式 ===== */
-	@media (max-width: 640px) {
-		.post {
-			grid-template-columns: 1fr;
-			gap: 8px;
-		}
-
-		.post__date {
-			padding-top: 0;
-		}
+	.preface__text:last-child {
+		margin-bottom: 0;
 	}
 </style>

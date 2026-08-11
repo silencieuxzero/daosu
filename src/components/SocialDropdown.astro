@@ -5,7 +5,7 @@ import { ui, defaultLang } from '../i18n/ui';
 import type { Lang } from '../i18n/utils';
 
 const { links = [], locale = defaultLang } = Astro.props as {
-	links?: { label: string; href: string }[];
+	links?: { label: string; href: string; icon?: string }[];
 	locale?: Lang;
 };
 const t = ui[locale] ?? ui[defaultLang];
@@ -160,7 +160,7 @@ const t = ui[locale] ?? ui[defaultLang];
 			(e) => {
 				if (
 					!socialMenu.hidden &&
-					!socialMenu.contains(e.target) &&
+					(!(e.target instanceof Node) || !socialMenu.contains(e.target)) &&
 					e.target !== socialToggle
 				) {
 					socialMenu.hidden = true;

@@ -5,6 +5,7 @@ import PostPage from '../../../components/PostPage.astro';
 import { getCollection } from 'astro:content';
 import { parsePostId } from '../../../i18n/utils';
 
+import { config } from '../../../lib/config';
 export async function getStaticPaths() {
 	const all = await getCollection('blog');
 	// 构建 slug → 可用语言映射（语言切换器只显示该文章存在的语言版本）
@@ -28,6 +29,6 @@ export async function getStaticPaths() {
 const { post, availableLangs } = Astro.props;
 ---
 
-<Layout title={`${post.data.title} · DAOSU`} availableLangs={availableLangs}>
+<Layout title={`${post.data.title} · ${config.site.name}`} availableLangs={availableLangs}>
 	<PostPage post={post} locale="it" />
 </Layout>

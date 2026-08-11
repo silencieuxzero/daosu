@@ -125,11 +125,14 @@ const postUrl = (slug: string) =>
 		padding: 22px;
 		border: var(--line) solid var(--border);
 		background: var(--bg);
-		transition: border-color 0.15s ease;
+		transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 	}
 
-	.card:hover {
+	.card:hover,
+	.card:focus-within {
 		border-color: var(--accent);
+		box-shadow: 6px 6px 0 0 var(--accent);
+		transform: translate(-2px, -2px);
 	}
 
 	.card__date {
@@ -143,6 +146,26 @@ const postUrl = (slug: string) =>
 		font-size: clamp(17px, 2vw, 21px);
 		font-weight: 900;
 		line-height: 1.4;
+		display: flex;
+		align-items: baseline;
+		gap: 10px;
+	}
+
+	/* 标题前的小方块指示（hover / 键盘聚焦时浮现） */
+	.card__title::before {
+		content: '';
+		flex: none;
+		width: 10px;
+		height: 10px;
+		background: var(--accent);
+		transform: translateY(-2px);
+		opacity: 0;
+		transition: opacity 0.15s ease;
+	}
+
+	.card:hover .card__title::before,
+	.card:focus-within .card__title::before {
+		opacity: 1;
 	}
 
 	.card__title a {

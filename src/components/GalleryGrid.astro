@@ -1,25 +1,32 @@
 ---
 // ============================================================
-// 画廊页（三语共用）：卡片网格 + 轻量 lightbox · 平面主义风格
-// 图片列表来自 config.toml [gallery.images]
+// 画廊/多媒体网格（三语共用）：卡片网格 + 轻量 lightbox · 平面主义风格
+// 图片列表来自 config.mjs [gallery.images]
+// head 可选：覆盖头部文案（kicker/title/desc），缺省用 i18n 字典
 // ============================================================
 import { ui, defaultLang } from '../i18n/ui';
 import type { Lang } from '../i18n/utils';
 import { config } from '../lib/config';
 
-const { locale = defaultLang } = Astro.props as { locale?: Lang };
+const { locale = defaultLang, head } = Astro.props as {
+	locale?: Lang;
+	head?: { kicker?: string; title?: string; desc?: string };
+};
 const t = ui[locale] ?? ui[defaultLang];
 
 const images = config.gallery.images;
+const headKicker = head?.kicker ?? t['gallery.kicker'];
+const headTitle = head?.title ?? t['gallery.title'];
+const headDesc = head?.desc ?? t['gallery.desc'];
 ---
 
 <main>
 	<!-- ===== 画廊头部 ===== -->
 	<header class="gallery-head">
 		<span class="seal" aria-hidden="true">览</span>
-		<p class="kicker">{t['gallery.kicker']}</p>
-		<h1 class="gallery-head__title">{t['gallery.title']}</h1>
-		<p class="gallery-head__desc">{t['gallery.desc']}</p>
+		<p class="kicker">{headKicker}</p>
+		<h1 class="gallery-head__title">{headTitle}</h1>
+		<p class="gallery-head__desc">{headDesc}</p>
 		<p class="gallery-head__meta">{t['gallery.count'].replace('{n}', String(images.length))}</p>
 	</header>
 
@@ -30,7 +37,13 @@ const images = config.gallery.images;
 	<section class="gallery-grid" aria-label="gallery">
 		{
 			images.map((img, i) => (
-				<figure class="gallery-card" data-index={i}>
+				<figure
+					class="gallery-card"
+					data-index={i}
+					tabindex="0"
+					role="button"
+					aria-label={img.alt ?? `Gallery image ${i + 1}`}
+				>
 					<div class="gallery-card__img">
 						<img src={img.src} alt={img.alt ?? ''} loading="lazy" />
 					</div>
@@ -43,7 +56,7 @@ const images = config.gallery.images;
 	</section>
 
 	<!-- ===== Lightbox ===== -->
-	<div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Gallery">
+	<div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label={headTitle}>
 		<button class="lightbox__close" id="lightbox-close" type="button" aria-label={t['gallery.close']}>×</button>
 		<button class="lightbox__nav lightbox__nav--prev" id="lightbox-prev" type="button" aria-label={t['gallery.prev']}>←</button>
 		<figure class="lightbox__figure">
@@ -124,14 +137,15 @@ const images = config.gallery.images;
 		transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 	}
 
-	.gallery-card:hover {
+	.gallery-card:hover,
+	.gallery-card:focus-visible {
 		border-color: var(--accent);
 		box-shadow: 8px 8px 0 0 var(--accent);
 		transform: translate(-2px, -2px);
 	}
 
 	.gallery-card__img {
-		aspect-ratio: 4 / 3;
+		aspect-ratio: 3 / 2;
 		overflow: hidden;
 		border-bottom: var(--line) solid var(--border);
 		background: var(--bg-alt);
@@ -142,6 +156,12 @@ const images = config.gallery.images;
 		height: 100%;
 		object-fit: cover;
 		display: block;
+		transition: transform 0.3s ease;
+	}
+
+	.gallery-card:hover .gallery-card__img img,
+	.gallery-card:focus-visible .gallery-card__img img {
+		transform: scale(1.04);
 	}
 
 	.gallery-card__alt {
@@ -186,6 +206,8 @@ const images = config.gallery.images;
 	.lightbox__figure img {
 		max-width: 100%;
 		max-height: 76vh;
+		width: auto;
+		height: auto;
 		border: var(--line) solid var(--border);
 		background: var(--bg);
 		box-shadow: 8px 8px 0 0 rgba(0, 0, 0, 0.55);
@@ -278,8 +300,9 @@ const images = config.gallery.images;
 	const nextBtn = document.getElementById('lightbox-next');
 
 	let current = 0;
+	let lastTrigger = null;
 
-	function openAt(index) {
+	function openAt(index, trigger = null) {
 		if (!images.length) return;
 		current = (index + images.length) % images.length;
 		lightboxImg.src = images[current].src;
@@ -287,6 +310,7 @@ const images = config.gallery.images;
 		lightboxAlt.textContent = images[current].alt ?? '';
 		lightbox.hidden = false;
 		document.body.style.overflow = 'hidden';
+		lastTrigger = trigger ?? cards[current];
 		closeBtn.focus();
 	}
 
@@ -294,11 +318,26 @@ const images = config.gallery.images;
 		lightbox.hidden = true;
 		lightboxImg.src = '';
 		document.body.style.overflow = '';
+		// 焦点还给触发卡片
+		if (lastTrigger && typeof lastTrigger.focus === 'function') {
+			lastTrigger.focus();
+		}
+	}
+
+	function openFromCard(card) {
+		openAt(parseInt(card.dataset.index, 10), card);
 	}
 
 	cards.forEach((card) => {
 		card.addEventListener('click', () => {
-			openAt(parseInt(card.dataset.index, 10));
+			openFromCard(card);
+		});
+		// 键盘可达：Enter / Space 打开
+		card.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				openFromCard(card);
+			}
 		});
 	});
 
@@ -320,7 +359,6 @@ const images = config.gallery.images;
 		e.stopPropagation();
 		openAt(current + 1);
 	});
-
 	document.addEventListener('keydown', (e) => {
 		if (lightbox.hidden) return;
 		if (e.key === 'Escape') closeBox();

@@ -1,0 +1,17 @@
+---
+// 多媒体库（原画廊内容）：几何纹样网格 + lightbox
+import Layout from '../layouts/Layout.astro';
+import GalleryGrid from '../components/GalleryGrid.astro';
+import { config } from '../lib/config';
+---
+
+<Layout title={`多媒体库 · ${config.site.name}`}>
+	<GalleryGrid
+		locale="zh"
+		head={{
+			kicker: '多媒体库 · 2026',
+			title: '多媒体库',
+			desc: '音乐、图像与影像的陈列架。收藏与创作都在这里。',
+		}}
+	/>
+</Layout>

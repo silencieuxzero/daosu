@@ -1,0 +1,162 @@
+---
+// ============================================================
+// 导航下拉组（顶栏）· 平面主义风格
+// 由 config.mjs [nav.groups] 驱动；点击展开、外部点击/Escape 关闭
+// 移动端由 Layout 平铺渲染（本组件 <640px 隐藏）
+// ============================================================
+import { localizedPath, defaultLang, type Lang } from '../i18n/utils';
+
+const { group, locale = defaultLang } = Astro.props as {
+	group: { label: string; items: { label: string; href: string }[] };
+	locale?: Lang;
+};
+---
+
+<div class="nav-group">
+	<button
+		id="nav-group-toggle"
+		class="nav-group__toggle"
+		type="button"
+		aria-haspopup="true"
+		aria-expanded="false"
+	>
+		<span>{group.label}</span>
+		<span class="nav-group__caret" aria-hidden="true">▾</span>
+	</button>
+	<ul id="nav-group-menu" class="nav-group__menu" hidden>
+		{
+			group.items.map((item) => (
+				<li>
+					<a class="nav-group__item" href={localizedPath(item.href, locale)}>
+						{item.label}
+					</a>
+				</li>
+			))
+		}
+	</ul>
+</div>
+
+<style>
+	.nav-group {
+		position: relative;
+		display: inline-flex;
+	}
+
+	.nav-group__toggle {
+		display: flex;
+		align-items: center;
+		gap: 7px;
+		padding: 9px 12px;
+		background: var(--bg);
+		color: var(--fg-muted);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		font: 700 12px/1 var(--font-mono);
+		letter-spacing: 0.12em;
+		cursor: pointer;
+		transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+	}
+
+	.nav-group__toggle:hover {
+		background: var(--fg);
+		color: var(--bg);
+	}
+
+	.nav-group__toggle[aria-expanded='true'] {
+		background: var(--accent);
+		color: var(--bg);
+		border-color: var(--accent);
+	}
+
+	.nav-group__caret {
+		font-size: 10px;
+		line-height: 1;
+		transition: transform 0.15s ease;
+	}
+
+	.nav-group__toggle[aria-expanded='true'] .nav-group__caret {
+		transform: rotate(180deg);
+	}
+
+	.nav-group__menu {
+		position: absolute;
+		top: calc(100% + 6px);
+		left: 0;
+		min-width: 150px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		background: var(--bg);
+		border: var(--line) solid var(--border);
+		z-index: 80;
+	}
+
+	.nav-group__menu[hidden] {
+		display: none;
+	}
+
+	.nav-group__item {
+		display: block;
+		padding: 12px 16px;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.12em;
+		text-decoration: none;
+		color: var(--fg);
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+
+	.nav-group__item + .nav-group__item {
+		border-top: 1px solid var(--grid-line);
+	}
+
+	.nav-group__item:hover {
+		background: var(--fg);
+		color: var(--bg);
+	}
+
+	/* 移动端：由 Layout 平铺渲染，隐藏本组件 */
+	@media (max-width: 640px) {
+		.nav-group {
+			display: none;
+		}
+	}
+</style>
+
+<script>
+	// 下拉菜单：点击切换、外部点击关闭、Escape 关闭
+	const toggle = document.getElementById('nav-group-toggle');
+	const menu = document.getElementById('nav-group-menu');
+
+	if (toggle && menu) {
+		toggle.addEventListener('click', (e) => {
+			e.stopPropagation();
+			menu.hidden = !menu.hidden;
+			toggle.setAttribute('aria-expanded', String(!menu.hidden));
+		});
+
+		// 捕获阶段：点击页面任意处（含其他下拉按钮）先关闭本菜单
+		document.addEventListener(
+			'click',
+			(e) => {
+				if (
+					!menu.hidden &&
+					(!(e.target instanceof Node) || !menu.contains(e.target)) &&
+					e.target !== toggle
+				) {
+					menu.hidden = true;
+					toggle.setAttribute('aria-expanded', 'false');
+				}
+			},
+			true
+		);
+
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape' && !menu.hidden) {
+				menu.hidden = true;
+				toggle.setAttribute('aria-expanded', 'false');
+				toggle.focus();
+			}
+		});
+	}
+</script>

@@ -1,5 +1,6 @@
 ---
 // 主题说明页（开发文档用，不进入博客导航，可通过 /theme 访问）
+import { config } from '../lib/config';
 import Layout from '../layouts/Layout.astro';
 
 const themeNav = [
@@ -10,7 +11,7 @@ const themeNav = [
 ];
 ---
 
-<Layout title="主题说明 · DAOSU" nav={themeNav} showLangSwitcher={false}>
+<Layout title=`主题说明 · ${config.site.name}` nav={themeNav} showLangSwitcher={false}>
 	<main>
 		<!-- ===== Hero ===== -->
 		<section class="hero">
@@ -491,9 +492,9 @@ const themeNav = [
 
 <script>
 	// 色板实时显示当前主题的变量值
-	const swatches = document.querySelectorAll('.swatch[data-var]');
+	const swatches = document.querySelectorAll<HTMLElement>('.swatch[data-var]');
 
-	function rgbToHex(rgb) {
+	function rgbToHex(rgb: string): string {
 		const m = rgb.match(/\d+/g);
 		if (!m) return rgb;
 		return '#' + m
@@ -505,9 +506,11 @@ const themeNav = [
 	function refresh() {
 		const cs = getComputedStyle(document.documentElement);
 		swatches.forEach((s) => {
-			const val = cs.getPropertyValue(s.dataset.var).trim();
-			s.querySelector('.swatch__chip').style.setProperty('--chip', val);
-			s.querySelector('.swatch__hex').textContent = rgbToHex(val);
+			const val = cs.getPropertyValue(s.dataset.var ?? '').trim();
+			const chip = s.querySelector<HTMLElement>('.swatch__chip');
+			const hex = s.querySelector('.swatch__hex');
+			if (chip) chip.style.setProperty('--chip', val);
+			if (hex) hex.textContent = rgbToHex(val);
 		});
 	}
 

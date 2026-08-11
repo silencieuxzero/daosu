@@ -1,9 +1,10 @@
 ---
 // Archive (English)
 import Layout from '../../layouts/Layout.astro';
+import { config } from '../../lib/config';
 import ArchiveGrid from '../../components/ArchiveGrid.astro';
 ---
 
-<Layout title="Archive · DAOSU">
+<Layout title=`Archive · ${config.site.name}`>
 	<ArchiveGrid locale="en" />
 </Layout>

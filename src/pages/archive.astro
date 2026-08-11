@@ -1,9 +1,10 @@
 ---
 // 归档页（中文）
 import Layout from '../layouts/Layout.astro';
+import { config } from '../lib/config';
 import ArchiveGrid from '../components/ArchiveGrid.astro';
 ---
 
-<Layout title="归档 · DAOSU">
+<Layout title=`归档 · ${config.site.name}`>
 	<ArchiveGrid locale="zh" />
 </Layout>

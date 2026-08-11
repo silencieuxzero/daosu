@@ -1,0 +1,228 @@
+---
+// 茶馆故事详情页（内容集合驱动）：/stories/xxx/
+import Layout from '../../layouts/Layout.astro';
+import { config } from '../../lib/config';
+import { getCollection, render } from 'astro:content';
+import { formatDate, defaultLang } from '../../i18n/utils';
+
+export async function getStaticPaths() {
+	const stories = await getCollection('stories');
+	return stories.map((story) => ({
+		params: { slug: story.id },
+		props: { story },
+	}));
+}
+
+const { story } = Astro.props;
+const { Content } = await render(story);
+
+// 上一篇 / 下一篇（按 order 排序）
+const all = (await getCollection('stories')).sort(
+	(a, b) => a.data.order - b.data.order
+);
+const idx = all.findIndex((s) => s.id === story.id);
+const prev = idx > 0 ? all[idx - 1] : null;
+const next = idx >= 0 && idx < all.length - 1 ? all[idx + 1] : null;
+
+const fmt = (d?: Date) => (d ? formatDate(d, defaultLang) : '');
+---
+
+<Layout title={`${story.data.title} · 茶馆故事 · ${config.site.name}`}>
+	<main class="page">
+		<p class="back">
+			<a class="btn btn--outline" href="/stories/">
+				← 返回茶馆故事
+			</a>
+		</p>
+
+		<article class="prose">
+			<header class="story-head">
+				<span class="seal" aria-hidden="true">故</span>
+				<p class="kicker">
+					{story.data.author && <span>{story.data.author}</span>}
+					{story.data.date && <span> · {fmt(story.data.date)}</span>}
+				</p>
+				<h1>{story.data.title}</h1>
+				{
+					story.data.description && (
+						<p class="story-head__desc">{story.data.description}</p>
+					)
+				}
+				{
+					story.data.tags.length > 0 && (
+						<div class="story-head__tags">
+							{
+								story.data.tags.map((tag) => (
+									<span class="story-head__tag">{tag}</span>
+								))
+							}
+						</div>
+					)
+				}
+			</header>
+			<Content />
+		</article>
+
+		{
+			story.data.source && (
+				<p class="story__source">
+					故事来源：{story.data.source} · CC-BY-SA
+				</p>
+			)
+		}
+
+		<!-- ===== 其他故事 ===== -->
+		{
+			(prev || next) && (
+				<nav class="story-nav" aria-label="其他故事">
+					{
+						prev ? (
+							<a class="story-nav__item" href={`/stories/${prev.id}/`}>
+								<span class="story-nav__dir">← 上一篇</span>
+								<span class="story-nav__name">{prev.data.title}</span>
+							</a>
+						) : (
+							<span></span>
+						)
+					}
+					{
+						next ? (
+							<a class="story-nav__item story-nav__item--next" href={`/stories/${next.id}/`}>
+								<span class="story-nav__dir">下一篇 →</span>
+								<span class="story-nav__name">{next.data.title}</span>
+							</a>
+						) : (
+							<span></span>
+						)
+					}
+				</nav>
+			)
+		}
+	</main>
+</Layout>
+
+<style>
+	.page {
+		padding: clamp(40px, 6vh, 72px) clamp(16px, 4vw, 48px);
+		max-width: 760px;
+		margin: 0 auto;
+	}
+
+	.back {
+		margin-bottom: clamp(24px, 3vh, 36px);
+	}
+
+	/* ===== 故事头部 ===== */
+	.story-head {
+		position: relative;
+		padding-bottom: 26px;
+		margin-bottom: 28px;
+		border-bottom: var(--line) solid var(--border);
+		background-color: var(--bg);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+	}
+
+	.story-head h1 {
+		margin: 16px 0 14px;
+		font-size: clamp(28px, 4.5vw, 40px);
+		font-weight: 900;
+		line-height: 1.25;
+		letter-spacing: -0.01em;
+	}
+
+	.story-head__desc {
+		color: var(--fg-muted);
+		line-height: 1.8;
+		margin-bottom: 16px;
+	}
+
+	.story-head__tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+
+	.story-head__tag {
+		border: 1px solid var(--grid-line);
+		padding: 4px 10px;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.12em;
+		color: var(--fg-muted);
+	}
+
+	/* 铭文水印 */
+	.story-head .seal {
+		right: 0;
+		top: -10px;
+		font-size: clamp(90px, 16vw, 200px);
+	}
+
+	.story-head > *:not(.seal) {
+		position: relative;
+		z-index: 1;
+	}
+
+	/* 故事正文中的分隔线用细横线 */
+	.story__source {
+		margin-top: 32px;
+		padding-top: 14px;
+		border-top: 1px solid var(--grid-line);
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.1em;
+		color: var(--fg-muted);
+	}
+
+	/* ===== 其他故事导航 ===== */
+	.story-nav {
+		display: flex;
+		justify-content: space-between;
+		gap: 16px;
+		margin-top: clamp(44px, 6vh, 64px);
+		padding-top: 24px;
+		border-top: var(--line) solid var(--border);
+	}
+
+	.story-nav__item {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		text-decoration: none;
+		padding: 14px 18px;
+		border: var(--line) solid var(--border);
+		max-width: 46%;
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+
+	.story-nav__item--next {
+		align-items: flex-end;
+		text-align: right;
+	}
+
+	.story-nav__item:hover {
+		background: var(--fg);
+		color: var(--bg);
+	}
+
+	.story-nav__dir {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.14em;
+		color: var(--fg-muted);
+		transition: color 0.15s ease;
+	}
+
+	.story-nav__item:hover .story-nav__dir {
+		color: var(--accent);
+	}
+
+	.story-nav__name {
+		font-size: 15px;
+		font-weight: 800;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+</style>

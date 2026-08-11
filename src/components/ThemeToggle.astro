@@ -77,13 +77,15 @@ const t = labels[locale] ?? labels.zh;
 	const footerTheme = document.getElementById('footer-theme');
 	const KEY = 'daosu-theme';
 
-	function apply(theme) {
+	// persist=false：仅同步 UI，不写入 localStorage（首次加载不产生用户偏好，
+	// 避免 config.mjs 更改默认主题后被旧 localStorage 值锁定）
+	function apply(theme, persist = true) {
 		document.documentElement.setAttribute('data-theme', theme);
 		const name = theme === 'ancient' ? t.ancient : t.modern;
 		label.textContent = name;
 		btn.setAttribute('aria-label', name);
 		if (footerTheme) footerTheme.textContent = name;
-		localStorage.setItem(KEY, theme);
+		if (persist) localStorage.setItem(KEY, theme);
 	}
 
 	btn.addEventListener('click', () => {
@@ -91,5 +93,5 @@ const t = labels[locale] ?? labels.zh;
 		apply(cur === 'ancient' ? 'modern' : 'ancient');
 	});
 
-	apply(document.documentElement.getAttribute('data-theme') || 'modern');
+	apply(document.documentElement.getAttribute('data-theme') || 'modern', false);
 </script>

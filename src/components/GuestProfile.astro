@@ -1,0 +1,255 @@
+---
+// ============================================================
+// 茶客完整档案：立绘 + 属性表 + 语录 + 正文（简介/履历/能力）+ 来源
+// 由内容集合 src/content/guests/*.md 驱动，详情页渲染
+// ============================================================
+const { guest, Content } = Astro.props as {
+	guest: any;
+	Content: any;
+};
+import { statusBadgeStyle } from '../lib/status';
+const statusText = String(guest.data.status ?? '');
+---
+
+<article class="guest">
+	<div class="guest__card">
+		<figure class="guest__portrait">
+			{
+				guest.data.portrait ? (
+					<img
+						src={guest.data.portrait}
+						alt={`${guest.data.name}的立绘`}
+						loading="lazy"
+					/>
+				) : (
+					<div class="guest__portrait-placeholder" aria-hidden="true">
+						{guest.data.name.charAt(0)}
+					</div>
+				)
+			}
+			<figcaption class="guest__portrait-caption">
+				{guest.data.name}
+			</figcaption>
+		</figure>
+
+		<div class="guest__info">
+			<div class="guest__head">
+				<h1 class="guest__name">{guest.data.name}</h1>
+				<span class="guest__status" data-status={statusText} style={statusBadgeStyle(statusText)}>{guest.data.status}</span>
+			</div>
+
+			<dl class="guest__attrs">
+				<div class="guest__attr">
+					<dt>性别</dt>
+					<dd>{guest.data.gender}</dd>
+				</div>
+				<div class="guest__attr">
+					<dt>年龄</dt>
+					<dd>{guest.data.age}</dd>
+				</div>
+				<div class="guest__attr">
+					<dt>身份</dt>
+					<dd>{guest.data.identity}</dd>
+				</div>
+				<div class="guest__attr">
+					<dt>所属</dt>
+					<dd>{guest.data.affiliation}</dd>
+				</div>
+			</dl>
+
+			{
+				guest.data.quote && (
+					<blockquote class="guest__quote">
+						<p>「{guest.data.quote}」</p>
+					</blockquote>
+				)
+			}
+		</div>
+	</div>
+
+	<!-- ===== 正文（简介 / 履历 / 能力） ===== -->
+	<div class="guest__body prose">
+		<Content />
+	</div>
+
+	{
+		guest.data.source && (
+			<p class="guest__source">
+				档案来源：{guest.data.source} · CC-BY-SA
+			</p>
+		)
+	}
+</article>
+
+<style>
+	/* ===== 档案卡片 ===== */
+	.guest__card {
+		display: grid;
+		grid-template-columns: minmax(200px, 240px) 1fr;
+		gap: 0;
+		border: var(--line) solid var(--border);
+		background-color: var(--bg);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+	}
+
+	/* 立绘 */
+	.guest__portrait {
+		margin: 0;
+		border-right: var(--line) solid var(--border);
+		background: var(--bg-alt);
+	}
+
+	.guest__portrait img {
+		width: 100%;
+		height: auto;
+		display: block;
+		aspect-ratio: 3 / 4;
+		object-fit: cover;
+		border-bottom: var(--line) solid var(--border);
+	}
+
+	/* 无立绘占位：首字方块 */
+	.guest__portrait-placeholder {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		aspect-ratio: 3 / 4;
+		background-color: var(--bg);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+		border-bottom: var(--line) solid var(--border);
+		font-family: 'STKaiti', 'KaiTi', 'SimSun', 'Noto Serif SC', serif;
+		font-size: clamp(64px, 10vw, 96px);
+		font-weight: 700;
+		color: var(--accent);
+	}
+
+	.guest__portrait-caption {
+		padding: 10px 14px;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.16em;
+		color: var(--fg-muted);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	/* 信息区 */
+	.guest__info {
+		padding: clamp(20px, 3vw, 32px);
+		display: flex;
+		flex-direction: column;
+		gap: 22px;
+	}
+
+	.guest__head {
+		display: flex;
+		align-items: baseline;
+		gap: 14px;
+		flex-wrap: wrap;
+	}
+
+	.guest__name {
+		margin: 0;
+		font-size: clamp(24px, 3.5vw, 34px);
+		font-weight: 900;
+		letter-spacing: 0.02em;
+		line-height: 1.25;
+	}
+
+	.guest__status {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.14em;
+		padding: 4px 10px;
+		/* 颜色由 inline style 按 status 文字自动生成；此处为回退默认 */
+		background: var(--status-unknown, var(--accent));
+		color: #fff;
+		border: var(--line) solid var(--border);
+	}
+
+	/* 属性表 */
+	.guest__attrs {
+		margin: 0;
+		border-top: var(--line) solid var(--border);
+	}
+
+	.guest__attr {
+		display: grid;
+		grid-template-columns: 72px 1fr;
+		gap: 12px;
+		padding: 12px 0;
+		border-bottom: 1px solid var(--grid-line);
+	}
+
+	.guest__attr dt {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.14em;
+		color: var(--fg-muted);
+	}
+
+	.guest__attr dd {
+		margin: 0;
+		font-size: 15px;
+		font-weight: 700;
+	}
+
+	/* 语录 */
+	.guest__quote {
+		margin: 0;
+		border-left: 6px solid var(--accent);
+		background-color: var(--bg-alt);
+		padding: 14px 16px;
+	}
+
+	.guest__quote p {
+		margin: 0;
+		font-family: 'STKaiti', 'KaiTi', 'SimSun', 'Noto Serif SC', serif;
+		font-size: 15px;
+		line-height: 1.8;
+	}
+
+	/* ===== 正文（复用 .prose 排版） ===== */
+	.guest__body {
+		margin-top: clamp(28px, 4vh, 44px);
+	}
+
+	/* ===== 来源 ===== */
+	.guest__source {
+		margin-top: 28px;
+		padding-top: 14px;
+		border-top: 1px solid var(--grid-line);
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.1em;
+		color: var(--fg-muted);
+	}
+
+	/* 古代主题：器物式双线层叠 */
+	[data-theme='ancient'] .guest__card {
+		outline: 2px solid var(--grid-line);
+		outline-offset: 4px;
+	}
+
+	/* ===== 响应式 ===== */
+	@media (max-width: 640px) {
+		.guest__card {
+			grid-template-columns: 1fr;
+		}
+
+		.guest__portrait {
+			border-right: none;
+			border-bottom: var(--line) solid var(--border);
+		}
+
+		.guest__portrait img {
+			aspect-ratio: auto;
+			max-height: 52vh;
+			object-fit: contain;
+			object-position: top;
+		}
+	}
+</style>

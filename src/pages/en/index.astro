@@ -1,9 +1,10 @@
 ---
 // Home (English)
 import Layout from '../../layouts/Layout.astro';
+import { config } from '../../lib/config';
 import BlogHome from '../../components/BlogHome.astro';
 ---
 
-<Layout title="DAOSU · Personal Blog">
+<Layout title=`${config.site.name} · Personal Blog`>
 	<BlogHome locale="en" />
 </Layout>

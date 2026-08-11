@@ -19,7 +19,7 @@ const MUSIC_RE = /\.(mp3|wav|ogg|flac|m4a|aac|opus|webm)$/i;
 let trackFiles: string[] = [];
 try {
 	trackFiles = readdirSync(join(process.cwd(), 'public', 'music'))
-		.filter((f) => MUSIC_RE.test(f))
+		.filter((f: string) => MUSIC_RE.test(f))
 		.sort();
 } catch {
 	/* public/music 不存在时为空列表 */
@@ -29,7 +29,7 @@ try {
 const configuredLocal = new Set(
 	config.music.songs
 		.filter((song) => song.url?.startsWith('/music/'))
-		.map((song) => song.url.replace(/^\/music\//, ''))
+		.map((song) => song.url?.replace(/^\/music\//, '') ?? '')
 );
 
 // 本地目录曲目（未被 config 配置标题的）
@@ -40,15 +40,16 @@ const localTracks = trackFiles
 		title: f.replace(/\.[^.]+$/, ''),
 	}));
 
-// 外部歌曲（config.toml [music.songs]）：bvid 构建时解析为 B 站音频流直链
+// 外部歌曲（config.mjs [music.songs]）：bvid 构建时解析为 B 站音频流直链
 const BILI_UA =
 	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36';
 
 async function resolveExternal(songs: { title?: string; url?: string; bvid?: string }[]) {
 	const out: { src: string; title: string }[] = [];
 	for (const song of songs) {
-		if (song.url) {
-			out.push({ src: song.url, title: song.title ?? 'Untitled' });
+		const directUrl = song.url;
+		if (directUrl) {
+			out.push({ src: directUrl, title: song.title ?? 'Untitled' });
 			continue;
 		}
 		if (!song.bvid) continue;

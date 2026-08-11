@@ -4,7 +4,8 @@ import ThemeToggle from '../components/ThemeToggle.astro';
 import MusicToggle from '../components/MusicToggle.astro';
 import SocialDropdown from '../components/SocialDropdown.astro';
 import SocialIcon from '../components/SocialIcon.astro';
-import { getLangFromUrl, localizedPath, languages, type Lang } from '../i18n/utils';
+import NavGroupDropdown from '../components/NavGroupDropdown.astro';
+import { localizedPath, languages, type Lang } from '../i18n/utils';
 import { ui, defaultLang } from '../i18n/ui';
 import { config } from '../lib/config';
 
@@ -25,14 +26,25 @@ const {
 const locale: Lang = (Astro.currentLocale as Lang) ?? defaultLang;
 const t = ui[locale] ?? ui[defaultLang];
 
-// 默认导航（本地化）——仅当 config.toml 未配置 [nav] 时使用
+// 默认导航（本地化）——仅当 config.mjs 未配置 [nav] 时使用
 const defaultNav = [
 	{ label: t['nav.home'], href: localizedPath('/', locale) },
 	{ label: t['nav.archive'], href: localizedPath('/archive', locale) },
 	{ label: t['nav.about'], href: localizedPath('/about', locale) },
 ];
 
-// 导航项优先级：页面显式 nav prop > config.toml [nav] > 内置默认导航
+// 当前路径（导航高亮用，忽略尾斜杠差异）
+const currentPath = Astro.url.pathname;
+const normalize = (p: string) => p.replace(/\/+$/, '') || '/';
+const isNavActive = (href: string) =>
+	!href.startsWith('http') && normalize(href) === normalize(currentPath);
+
+// 当前语言可见的下拉组（config.mjs [nav.groups]：locales 限定或缺省全部）
+const visibleGroups = config.nav.groups.filter(
+	(g) => !g.locales || g.locales.includes(locale)
+);
+
+// 导航项优先级：页面显式 nav prop > config.mjs [nav] > 内置默认导航
 // config 导航的站内 href 自动加语言前缀，外部链接/锚点原样使用
 const navItems =
 	nav ??
@@ -49,7 +61,6 @@ const navItems =
 		: defaultNav);
 
 // 语言切换链接：同路径换语言前缀；availableLangs 限定可用语言（避免指向不存在的页面）
-const currentPath = Astro.url.pathname;
 const langLinks = (Object.keys(languages) as Lang[])
 	.filter((l) => !availableLangs || availableLangs.includes(l))
 	.map((l) => ({
@@ -59,7 +70,7 @@ const langLinks = (Object.keys(languages) as Lang[])
 		active: l === locale,
 	}));
 
-// 主题配置（来自 config.toml）
+// 主题配置（来自 config.mjs）
 // 注意：不能直接注入 --accent（会污染古代主题的强调色），
 // 而是注入 --modern-accent / --ancient-accent，由各主题变量组自行引用
 const themeStyle = `--modern-accent: ${config.theme.accent}; --ancient-accent: ${config.theme.ancient_accent};`;
@@ -81,7 +92,7 @@ const textures = config.theme.enable_textures ? 'on' : 'off';
 		<link rel="icon" href="/favicon.ico" />
 		<meta name="generator" content={Astro.generator} />
 		<title>{title}</title>
-		<!-- 首帧前恢复主题，避免闪烁（FOUC）；默认主题来自 config.toml -->
+		<!-- 首帧前恢复主题，避免闪烁（FOUC）；默认主题来自 config.mjs -->
 		<script is:inline>
 			(function () {
 				var DEFAULT_THEME =
@@ -97,10 +108,21 @@ const textures = config.theme.enable_textures ? 'on' : 'off';
 		<header class="topbar">
 			<a class="brand" href={localizedPath('/', locale)}>{config.site.name}</a>
 			<div class="topbar__right">
-				<nav class="nav" aria-label="站点导航">
+				<nav class="nav" aria-label={t['nav.nav']}>
 					{
 						navItems.map((item) => (
-							<a href={item.href}>{item.label}</a>
+							<a
+								href={item.href}
+								class:list={[{ 'nav__link--active': isNavActive(item.href) }]}
+								aria-current={isNavActive(item.href) ? 'page' : undefined}
+							>
+								{item.label}
+							</a>
+						))
+					}
+					{
+						visibleGroups.map((group) => (
+							<NavGroupDropdown group={group} locale={locale} />
 						))
 					}
 				</nav>
@@ -156,10 +178,19 @@ const textures = config.theme.enable_textures ? 'on' : 'off';
 
 			<!-- 移动端菜单面板（<640px 显示） -->
 			<div id="mobile-menu" class="mobile-menu" hidden>
-				<nav class="mobile-menu__nav" aria-label="mobile navigation">
+				<nav class="mobile-menu__nav" aria-label={t['nav.nav']}>
 					{
 						navItems.map((item) => (
-							<a class="mobile-menu__link" href={item.href}>{item.label}</a>
+							<a
+								class:list={[
+									'mobile-menu__link',
+									{ 'mobile-menu__link--active': isNavActive(item.href) },
+								]}
+								href={item.href}
+								aria-current={isNavActive(item.href) ? 'page' : undefined}
+							>
+								{item.label}
+							</a>
 						))
 					}
 				</nav>
@@ -185,6 +216,22 @@ const textures = config.theme.enable_textures ? 'on' : 'off';
 							</div>
 						</div>
 					)
+				}
+				{
+					visibleGroups.map((group) => (
+						<div class="mobile-menu__section">
+							<p class="mobile-menu__label">{group.label}</p>
+							<div class="mobile-menu__langs">
+								{
+									group.items.map((item) => (
+										<a class="mobile-menu__lang" href={localizedPath(item.href, locale)}>
+											{item.label}
+										</a>
+									))
+								}
+							</div>
+						</div>
+					))
 				}
 				{
 					config.social.links.length > 0 && (
@@ -222,6 +269,18 @@ const textures = config.theme.enable_textures ? 'on' : 'off';
 				</p>
 			</div>
 		</footer>
+
+		<!-- ===== 回到顶部 ===== -->
+		<button
+			id="back-to-top"
+			class="back-to-top"
+			type="button"
+			aria-label="Back to top"
+		>
+			<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">
+				<path d="M8 13V3M3 8l5-5 5 5" />
+			</svg>
+		</button>
 
 		<!-- ===== 全局音乐播放器 ===== -->
 		<MusicToggle locale={locale} />
@@ -277,6 +336,22 @@ const textures = config.theme.enable_textures ? 'on' : 'off';
 
 	.nav > a:hover {
 		color: var(--accent);
+	}
+
+	/* 当前页高亮：accent 色 + 下划线指示 */
+	.nav > a.nav__link--active {
+		color: var(--accent);
+		position: relative;
+	}
+
+	.nav > a.nav__link--active::after {
+		content: '';
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: -6px;
+		height: 2px;
+		background: var(--accent);
 	}
 
 	.topbar__right {
@@ -470,6 +545,10 @@ const textures = config.theme.enable_textures ? 'on' : 'off';
 		color: var(--accent);
 	}
 
+	.mobile-menu__link--active {
+		color: var(--accent);
+	}
+
 	.mobile-menu__section {
 		margin-top: 18px;
 	}
@@ -553,7 +632,11 @@ const textures = config.theme.enable_textures ? 'on' : 'off';
 		document.addEventListener(
 			'click',
 			(e) => {
-				if (!langMenu.hidden && !langMenu.contains(e.target) && e.target !== langToggle) {
+				if (
+					!langMenu.hidden &&
+					(!(e.target instanceof Node) || !langMenu.contains(e.target)) &&
+					e.target !== langToggle
+				) {
 					langMenu.hidden = true;
 					langToggle.setAttribute('aria-expanded', 'false');
 				}
@@ -590,7 +673,11 @@ const textures = config.theme.enable_textures ? 'on' : 'off';
 		document.addEventListener(
 			'click',
 			(e) => {
-				if (!mobileMenu.hidden && !mobileMenu.contains(e.target) && e.target !== menuToggle) {
+				if (
+					!mobileMenu.hidden &&
+					(!(e.target instanceof Node) || !mobileMenu.contains(e.target)) &&
+					e.target !== menuToggle
+				) {
 					closeMenu();
 				}
 			},
@@ -606,7 +693,36 @@ const textures = config.theme.enable_textures ? 'on' : 'off';
 
 		// 点击面板内任意链接后关闭
 		mobileMenu.addEventListener('click', (e) => {
-			if (e.target.closest('a')) closeMenu();
+			if (e.target instanceof Element && e.target.closest('a')) closeMenu();
 		});
+	}
+
+	// ===== 回到顶部 =====
+	const backToTop = document.getElementById('back-to-top');
+	if (backToTop) {
+		const SHOW_AFTER = 600;
+		let ticking = false;
+
+		const update = () => {
+			backToTop.classList.toggle('is-visible', window.scrollY > SHOW_AFTER);
+			ticking = false;
+		};
+
+		window.addEventListener(
+			'scroll',
+			() => {
+				if (!ticking) {
+					ticking = true;
+					requestAnimationFrame(update);
+				}
+			},
+			{ passive: true }
+		);
+
+		backToTop.addEventListener('click', () => {
+			window.scrollTo({ top: 0, behavior: 'smooth' });
+		});
+
+		update();
 	}
 </script>

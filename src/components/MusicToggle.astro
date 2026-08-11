@@ -145,16 +145,17 @@ const t = ui[locale] ?? ui[defaultLang];
 	}
 </style>
 
-<script>
+<script define:vars={{ pt: { open: t['player.open'], close: t['player.close'] } }}>
 	const wrapper = document.getElementById('music-toggle');
 	const toggleBtn = document.getElementById('music-toggle-btn');
 	const closeBtn = document.getElementById('music-close-btn');
-	const panel = document.getElementById('music-toggle-panel');
 
 	function setOpen(open) {
 		wrapper.classList.toggle('is-open', open);
 		toggleBtn.classList.toggle('is-open', open);
 		toggleBtn.setAttribute('aria-expanded', String(open));
+		// 无障碍标签随状态切换（打开/收起）
+		toggleBtn.setAttribute('aria-label', open ? pt.close : pt.open);
 	}
 
 	toggleBtn.addEventListener('click', () => {

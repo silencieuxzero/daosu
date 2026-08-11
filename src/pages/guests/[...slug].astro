@@ -1,0 +1,126 @@
+---
+// 茶客详情页（内容集合驱动）：/guests/xxx/
+import Layout from '../../layouts/Layout.astro';
+import GuestProfile from '../../components/GuestProfile.astro';
+import { config } from '../../lib/config';
+import { getCollection, render } from 'astro:content';
+
+export async function getStaticPaths() {
+	const guests = await getCollection('guests');
+	return guests.map((guest) => ({
+		params: { slug: guest.id },
+		props: { guest },
+	}));
+}
+
+const { guest } = Astro.props;
+const { Content } = await render(guest);
+
+// 上一篇 / 下一篇（按 order 排序）
+const all = (await getCollection('guests')).sort(
+	(a, b) => a.data.order - b.data.order
+);
+const idx = all.findIndex((g) => g.id === guest.id);
+const prev = idx > 0 ? all[idx - 1] : null;
+const next = idx >= 0 && idx < all.length - 1 ? all[idx + 1] : null;
+---
+
+<Layout title={`${guest.data.name} · 茶客设定 · ${config.site.name}`}>
+	<main class="page">
+		<p class="back">
+			<a class="btn btn--outline" href="/guests/">
+				← 返回茶客设定
+			</a>
+		</p>
+
+		<GuestProfile guest={guest} Content={Content} />
+
+		<!-- ===== 其他茶客 ===== -->
+		{
+			(prev || next) && (
+				<nav class="guest-nav" aria-label="其他茶客">
+					{
+						prev ? (
+							<a class="guest-nav__item" href={`/guests/${prev.id}/`}>
+								<span class="guest-nav__dir">← 上一位</span>
+								<span class="guest-nav__name">{prev.data.name}</span>
+							</a>
+						) : (
+							<span></span>
+						)
+					}
+					{
+						next ? (
+							<a class="guest-nav__item guest-nav__item--next" href={`/guests/${next.id}/`}>
+								<span class="guest-nav__dir">下一位 →</span>
+								<span class="guest-nav__name">{next.data.name}</span>
+							</a>
+						) : (
+							<span></span>
+						)
+					}
+				</nav>
+			)
+		}
+	</main>
+</Layout>
+
+<style>
+	.page {
+		padding: clamp(40px, 6vh, 72px) clamp(16px, 4vw, 48px);
+		max-width: 820px;
+		margin: 0 auto;
+	}
+
+	.back {
+		margin-bottom: clamp(24px, 3vh, 36px);
+	}
+
+	/* ===== 其他茶客导航 ===== */
+	.guest-nav {
+		display: flex;
+		justify-content: space-between;
+		gap: 16px;
+		margin-top: clamp(44px, 6vh, 64px);
+		padding-top: 24px;
+		border-top: var(--line) solid var(--border);
+	}
+
+	.guest-nav__item {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		text-decoration: none;
+		padding: 14px 18px;
+		border: var(--line) solid var(--border);
+		transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+	}
+
+	.guest-nav__item--next {
+		align-items: flex-end;
+		text-align: right;
+	}
+
+	.guest-nav__item:hover {
+		background: var(--fg);
+		color: var(--bg);
+		border-color: var(--border);
+	}
+
+	.guest-nav__dir {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.14em;
+		color: var(--fg-muted);
+		transition: color 0.15s ease;
+	}
+
+	.guest-nav__item:hover .guest-nav__dir {
+		color: var(--accent);
+	}
+
+	.guest-nav__name {
+		font-size: 15px;
+		font-weight: 800;
+	}
+</style>

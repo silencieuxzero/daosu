@@ -18,11 +18,46 @@
   --fg: #0a0a0a;
   --fg-muted: #6f6f6f;
   --border: #0a0a0a;
-  --accent: var(--modern-accent, #0000e0); /* 代表色 · 蓝（值由 config.toml 注入） */
+  --accent: var(--modern-accent, #0000e0); /* 代表色 · 蓝（值由 config.mjs 注入） */
   --accent-soft: #e6e6ff;
   --invert-bg: #0a0a0a;
   --invert-fg: #ffffff;
   --grid-line: #d9d9d9;
+
+  /* 茶客状态徽章色（由 src/lib/status.ts 按 status 文字选用） */
+  --status-active: #2f7d32; /* 活跃 · 绿 */
+  --status-undead: #a35c1e; /* 不活跃 · 赭橙 */
+  --status-dormant: #4a6b8a; /* 休眠 · 蓝灰 */
+  --status-missing: #6b6b6b; /* 失踪 · 灰 */
+  --status-dead: #3f3f46; /* 已故 · 深灰 */
+  --status-stopped: #8a5a00; /* 停更 · 暗金 */
+  --status-unknown: #6f6f6f; /* 未知状态回退 */
+
+  /* 代码高亮（Shiki css-variables）· 黑白灰 + 代表蓝点缀 */
+  --astro-code-foreground: #111111;
+  --astro-code-background: #f1f1f1;
+  --astro-code-token-comment: #8a8a8a;
+  --astro-code-token-keyword: #3f63c0;
+  --astro-code-token-string: #24548f;
+  --astro-code-token-string-expression: #24548f;
+  --astro-code-token-number: #3f63c0;
+  --astro-code-token-constant: #3f63c0;
+  --astro-code-token-function: #111111;
+  --astro-code-token-operator: #4a4a4a;
+  --astro-code-token-punctuation: #6f6f6f;
+  --astro-code-token-tag: #3f63c0;
+  --astro-code-token-type: #3f63c0;
+  --astro-code-token-parameter: #111111;
+  --astro-code-token-property: #111111;
+  --astro-code-token-variable: #111111;
+  --astro-code-token-selector: #3f63c0;
+  --astro-code-token-annotation: #8a8a8a;
+  --astro-code-token-meta: #8a8a8a;
+  --astro-code-token-important: #3f63c0;
+  --astro-code-token-error: #b3261e;
+  --astro-code-token-link: #24548f;
+  --astro-code-token-regexp: #24548f;
+  --astro-code-token-symbol: #24548f;
 }
 
 /* ---------- 主题二：古代（黛蓝 · 低饱和深蓝） ---------- */
@@ -32,14 +67,49 @@
   --fg: #ede7da;
   --fg-muted: #97a8bf;
   --border: #ede7da;
-  --accent: var(--ancient-accent, #8aaacf); /* 黛蓝底上的强调，可由 config.toml 覆盖 */
+  --accent: var(--ancient-accent, #8aaacf); /* 黛蓝底上的强调，可由 config.mjs 覆盖 */
   --accent-soft: #34465f;
   --invert-bg: #ede7da;
   --invert-fg: #2e3b52;
   --grid-line: #43536d;
+
+  /* 茶客状态徽章色（古代主题：低饱和土系，与黛蓝协调） */
+  --status-active: #5f8a63; /* 活跃 · 灰绿 */
+  --status-undead: #a8794a; /* 不活跃 · 土赭 */
+  --status-dormant: #7d93ac; /* 休眠 · 黛灰蓝 */
+  --status-missing: #8a8a7e; /* 失踪 · 土灰 */
+  --status-dead: #6e6a60; /* 已故 · 深褐灰 */
+  --status-stopped: #9c8a5c; /* 停更 · 青铜 */
+  --status-unknown: #97a8bf; /* 未知状态回退 */
+
+  /* 代码高亮（Shiki css-variables）· 米白正文 + 黛蓝底 */
+  --astro-code-foreground: #ede7da;
+  --astro-code-background: #26344a;
+  --astro-code-token-comment: #97a8bf;
+  --astro-code-token-keyword: #8aaacf;
+  --astro-code-token-string: #c3d0e4;
+  --astro-code-token-string-expression: #c3d0e4;
+  --astro-code-token-number: #8aaacf;
+  --astro-code-token-constant: #8aaacf;
+  --astro-code-token-function: #ede7da;
+  --astro-code-token-operator: #b9c4d6;
+  --astro-code-token-punctuation: #97a8bf;
+  --astro-code-token-tag: #8aaacf;
+  --astro-code-token-type: #8aaacf;
+  --astro-code-token-parameter: #ede7da;
+  --astro-code-token-property: #ede7da;
+  --astro-code-token-variable: #ede7da;
+  --astro-code-token-selector: #8aaacf;
+  --astro-code-token-annotation: #97a8bf;
+  --astro-code-token-meta: #97a8bf;
+  --astro-code-token-important: #8aaacf;
+  --astro-code-token-error: #e08a8a;
+  --astro-code-token-link: #c3d0e4;
+  --astro-code-token-regexp: #c3d0e4;
+  --astro-code-token-symbol: #c3d0e4;
 }
 
-/* 纹理总开关：config.toml [theme] enable_textures = false 时关闭全部先秦纹理 */
+/* 纹理总开关：config.mjs [theme] enable_textures = false 时关闭全部先秦纹理 */
 [data-theme="ancient"][data-textures="off"] {
   --texture-body: none;
   --texture-rect: none;
@@ -336,5 +406,140 @@ img {
 .prose th {
   background: var(--bg-alt);
   font-weight: 800;
+}
+
+/* ============================================================
+   交互反馈 · 焦点 / 按压 / 动效
+   ============================================================ */
+
+/* 统一键盘焦点环（平面主义：2px 直角描边） */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 统一按压反馈：平面按钮"按下去"的位移 */
+.btn:active,
+.theme-toggle:active,
+.lang-toggle:active,
+.social-toggle:active,
+.menu-toggle:active,
+.music__btn:active,
+.music-toggle__btn:active,
+.toc__btn:active,
+.reader:active,
+.lightbox__close:active,
+.lightbox__nav:active,
+.music__loop:active,
+.code-fold__btn:active,
+.back-to-top:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+/* 页脚版权行与主题行缩进对齐（视觉微调） */
+.footer__row {
+  align-items: baseline;
+}
+
+/* 页面进入动画（克制：仅上浮 8px；尊重系统减弱动效设置） */
+@keyframes daosu-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+main {
+  /* 注意：fill-mode 不能用 both —— 动画结束后保留的 transform 恒等矩阵
+     会让 main 成为 fixed 后代的包含块，lightbox/回顶/目录等全部定位错乱。
+     backwards 只保留延迟期首帧，结束后 transform 恢复 none。 */
+  animation: daosu-page-in 0.35s ease backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  main {
+    animation: none;
+  }
+}
+
+/* 自定义滚动条（细 · 方形 · 双主题跟随） */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--fg-muted) var(--bg-alt);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-alt);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--fg-muted);
+  border: 2px solid var(--bg-alt);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* ============================================================
+   回到顶部按钮（Layout 挂载 · 平面主义小方块）
+   ============================================================ */
+.back-to-top {
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  z-index: 94;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  color: var(--fg);
+  border: var(--line) solid var(--border);
+  border-radius: 0;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 0 var(--fg);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s,
+    background-color 0.15s ease, color 0.15s ease;
+}
+
+.back-to-top.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+
+.back-to-top:hover {
+  background: var(--fg);
+  color: var(--bg);
+  box-shadow: 2px 2px 0 0 var(--fg);
+}
+
+.back-to-top svg {
+  width: 14px;
+  height: 14px;
+}
+
+@media (max-width: 640px) {
+  .back-to-top {
+    left: 14px;
+    bottom: 14px;
+    width: 40px;
+    height: 40px;
+  }
 }
 

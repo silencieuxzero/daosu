@@ -1,0 +1,231 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { config } from '../lib/config';
+import { getCollection } from 'astro:content';
+
+// 茶客索引：来自 src/content/guests/*.md，按 order 排序（不含正文，正文在详情页）
+import { statusTextStyle } from '../lib/status';
+
+const guests = (await getCollection('guests')).sort(
+	(a, b) => a.data.order - b.data.order
+);
+---
+
+<Layout title={`茶客设定 · ${config.site.name}`}>
+	<main class="page">
+		<header class="sec-head">
+			<span class="seal" aria-hidden="true">客</span>
+			<p class="kicker">茶客设定 · 2026</p>
+			<h1>茶客设定</h1>
+			<p class="sec-head__desc">
+				出入茶馆的茶客们——他们的名字、来历与随身之物。已登记
+				{guests.length} 位，点击卡片查看档案。
+			</p>
+		</header>
+
+		<!-- 回纹条带（仅古代主题） -->
+		<div class="band" aria-hidden="true"></div>
+
+		<!-- ===== 茶客卡片网格（索引） ===== -->
+		<section class="guest-grid" aria-label="茶客列表">
+			{
+				guests.map((guest, i) => (
+					<article class="guest-card">
+						<a class="guest-card__link" href={`/guests/${guest.id}/`}>
+							<div class="guest-card__img">
+								{
+									guest.data.portrait ? (
+										<img
+											src={guest.data.portrait}
+											alt={`${guest.data.name}的立绘`}
+											loading="lazy"
+										/>
+									) : (
+										<span class="guest-card__placeholder" aria-hidden="true">
+											{guest.data.name.charAt(0)}
+										</span>
+									)
+								}
+							</div>
+							<div class="guest-card__body">
+								<p class="guest-card__idx">NO.{String(i + 1).padStart(2, '0')}</p>
+								<h2 class="guest-card__name">{guest.data.name}</h2>
+								{
+									guest.data.description && (
+										<p class="guest-card__desc">{guest.data.description}</p>
+									)
+								}
+								<p class="guest-card__meta">
+									{guest.data.identity} ·{' '}
+									<span
+										class="guest-card__status"
+										data-status={guest.data.status}
+										style={statusTextStyle(String(guest.data.status ?? ''))}
+									>
+										{guest.data.status}
+									</span>
+								</p>
+							</div>
+						</a>
+					</article>
+				))
+			}
+		</section>
+	</main>
+</Layout>
+
+<style>
+	.page {
+		padding: clamp(40px, 6vh, 72px) clamp(16px, 4vw, 48px);
+		max-width: 860px;
+		margin: 0 auto;
+	}
+
+	.sec-head {
+		position: relative;
+		padding-bottom: 26px;
+		border-bottom: var(--line) solid var(--border);
+		background-color: var(--bg);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+	}
+
+	.sec-head h1 {
+		margin: 16px 0 14px;
+		font-size: clamp(32px, 6vw, 56px);
+		font-weight: 900;
+		line-height: 1.05;
+		letter-spacing: -0.02em;
+	}
+
+	.sec-head__desc {
+		max-width: 52ch;
+		font-size: clamp(14px, 1.5vw, 17px);
+		line-height: 1.8;
+		color: var(--fg-muted);
+	}
+
+	.sec-head > *:not(.seal) {
+		position: relative;
+		z-index: 1;
+	}
+
+	.band {
+		display: none;
+		height: 14px;
+		background: var(--texture-band) repeat-x;
+		background-size: 96px 14px;
+		border-bottom: var(--line) solid var(--border);
+	}
+
+	[data-theme='ancient'] .band {
+		display: block;
+	}
+
+	/* ===== 茶客卡片网格 ===== */
+	.guest-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+		gap: 18px;
+		margin-top: clamp(40px, 6vh, 72px);
+	}
+
+	.guest-card {
+		border: var(--line) solid var(--border);
+		background-color: var(--bg);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+		transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+	}
+
+	.guest-card:hover,
+	.guest-card:focus-within {
+		border-color: var(--accent);
+		box-shadow: 6px 6px 0 0 var(--accent);
+		transform: translate(-2px, -2px);
+	}
+
+	.guest-card__link {
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+		text-decoration: none;
+		color: inherit;
+	}
+
+	.guest-card__img {
+		aspect-ratio: 3 / 4;
+		overflow: hidden;
+		border-bottom: var(--line) solid var(--border);
+		background: var(--bg-alt);
+	}
+
+	.guest-card__img img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		display: block;
+		transition: transform 0.3s ease;
+	}
+
+	.guest-card__placeholder {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 100%;
+		height: 100%;
+		background-color: var(--bg);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+		font-family: 'STKaiti', 'KaiTi', 'SimSun', 'Noto Serif SC', serif;
+		font-size: clamp(56px, 9vw, 84px);
+		font-weight: 700;
+		color: var(--accent);
+	}
+
+	.guest-card:hover .guest-card__img img,
+	.guest-card:focus-within .guest-card__img img {
+		transform: scale(1.04);
+	}
+
+	.guest-card__body {
+		padding: 16px 18px 18px;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		flex: 1;
+	}
+
+	.guest-card__idx {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.16em;
+		color: var(--accent);
+	}
+
+	.guest-card__name {
+		font-size: clamp(17px, 2vw, 21px);
+		font-weight: 900;
+		line-height: 1.3;
+	}
+
+	.guest-card__desc {
+		flex: 1;
+		font-size: 13px;
+		line-height: 1.7;
+		color: var(--fg-muted);
+	}
+
+	.guest-card__meta {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.12em;
+		color: var(--fg-muted);
+	}
+
+	/* 古代主题：器物式双线层叠 */
+	[data-theme='ancient'] .guest-card {
+		outline: 2px solid var(--grid-line);
+		outline-offset: 4px;
+	}
+</style>

@@ -543,3 +543,15 @@ main {
   }
 }
 
+/* ============================================================
+   主题内容分套：现代/古代各一套内容
+   内容容器加 data-split="modern|ancient"，切换主题时即时显隐
+   ============================================================ */
+[data-theme='modern'] [data-split='ancient'] {
+  display: none !important;
+}
+
+[data-theme='ancient'] [data-split='modern'] {
+  display: none !important;
+}
+

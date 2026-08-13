@@ -1,5 +1,6 @@
 ---
 // 文章详情页（三语共用）
+// 主题分套：同一 URL 下渲染现代/古代两套正文，切换主题即时显隐
 import { render } from 'astro:content';
 import { ui, defaultLang } from '../i18n/ui';
 import { formatDate, localizedPath, type Lang } from '../i18n/utils';
@@ -7,12 +8,15 @@ import { config } from '../lib/config';
 import TableOfContents from './TableOfContents.astro';
 import ReaderMode from './ReaderMode.astro';
 
-const { post, locale = defaultLang } = Astro.props as {
+const { post, locale = defaultLang, ancient } = Astro.props as {
 	post: any;
 	locale?: Lang;
+	ancient?: any;
 };
 const t = ui[locale] ?? ui[defaultLang];
 const { Content } = await render(post);
+// 注意：模板中直接渲染的组件变量必须以大写开头，否则会被当作 HTML 元素
+const AncientContent = ancient ? (await render(ancient)).Content : null;
 
 // 作者信息（来自 config.mjs）
 const authorName = config.profile.author || config.site.name;
@@ -25,26 +29,55 @@ const githubHref = config.profile.github.startsWith('http')
 <div class="reading-progress" id="reading-progress" aria-hidden="true"></div>
 
 <main class="page">
-	<article class="prose">
-		<header class="post-head">
-			<span class="seal" aria-hidden="true">篇</span>
-			<p class="kicker">{formatDate(post.data.date, locale)}</p>
-			<h1>{post.data.title}</h1>
-			{
-				post.data.description && (
-					<p class="post-head__desc">{post.data.description}</p>
-				)
-			}
-			<div class="post-head__tags">
+	<!-- ===== 现代主题正文（无古代版时两主题共用，不附加 data-split） ===== -->
+	<div data-split={AncientContent ? 'modern' : undefined}>
+		<article class="prose">
+			<header class="post-head">
+				<span class="seal" aria-hidden="true">篇</span>
+				<p class="kicker">{formatDate(post.data.date, locale)}</p>
+				<h1>{post.data.title}</h1>
 				{
-					post.data.tags.map((tag: string) => (
-						<span class="post-head__tag">{tag}</span>
-					))
+					post.data.description && (
+						<p class="post-head__desc">{post.data.description}</p>
+					)
 				}
-			</div>
-		</header>
-		<Content />
-	</article>
+				<div class="post-head__tags">
+					{
+						post.data.tags.map((tag: string) => (
+							<span class="post-head__tag">{tag}</span>
+						))
+					}
+				</div>
+			</header>
+			<Content />
+		</article>
+	</div>
+
+	<!-- ===== 古代主题正文（无 .ancient 变体时回退共用现代版） ===== -->
+	{AncientContent && (
+		<div data-split="ancient">
+			<article class="prose">
+				<header class="post-head">
+					<span class="seal" aria-hidden="true">篇</span>
+					<p class="kicker">{formatDate(ancient.data.date, locale)}</p>
+					<h1>{ancient.data.title}</h1>
+					{
+						ancient.data.description && (
+							<p class="post-head__desc">{ancient.data.description}</p>
+						)
+					}
+					<div class="post-head__tags">
+						{
+							ancient.data.tags.map((tag: string) => (
+								<span class="post-head__tag">{tag}</span>
+							))
+						}
+					</div>
+				</header>
+				<AncientContent />
+			</article>
+		</div>
+	)}
 
 	<!-- ===== 作者信息栏 ===== -->
 	<aside class="author-box" aria-label="author">

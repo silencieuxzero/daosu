@@ -4,12 +4,18 @@ import { config } from '../lib/config';
 import { getCollection } from 'astro:content';
 import { formatDate, defaultLang } from '../i18n/utils';
 
-// 茶馆故事索引：来自 src/content/stories/*.md，按 order 排序
-const stories = (await getCollection('stories')).sort(
-	(a, b) => a.data.order - b.data.order
-);
+// 茶馆故事索引：来自 src/content/stories/*.md（+ .ancient 古代版），按 order 排序
+// 主题分套：现代/古代各一套列表，切换主题即时显隐
+import { pairEntries, entryFor, pairKeyOf, isDefined } from '../lib/variants';
+
+const stories = pairEntries(await getCollection('stories'));
+const hasAncient = stories.some((s) => s.ancient);
 
 const fmt = (d?: Date) => (d ? formatDate(d, defaultLang) : '');
+
+// 两套列表（古代缺省回退现代版）
+const modernList = stories.map((p) => entryFor(p, 'modern')).filter(isDefined);
+const ancientList = stories.map((p) => entryFor(p, 'ancient')).filter(isDefined);
 ---
 
 <Layout title={`茶馆故事 · ${config.site.name}`}>
@@ -26,7 +32,7 @@ const fmt = (d?: Date) => (d ? formatDate(d, defaultLang) : '');
 		<!-- 回纹条带（仅古代主题） -->
 		<div class="band" aria-hidden="true"></div>
 
-		<!-- ===== 故事列表 ===== -->
+		<!-- ===== 故事列表（现代主题） ===== -->
 		{
 			stories.length === 0 ? (
 				<section class="empty">
@@ -35,9 +41,53 @@ const fmt = (d?: Date) => (d ? formatDate(d, defaultLang) : '');
 					<p class="empty__desc">这个栏目正在整理，稍后来坐坐。</p>
 				</section>
 			) : (
+				<div data-split={hasAncient ? 'modern' : undefined}>
+					<section class="story-list" aria-label="故事列表">
+						{
+							modernList.map((story, i) => (
+								<article class="story">
+									<div class="story__side">
+										<p class="story__idx">{String(i + 1).padStart(2, '0')}</p>
+										<p class="story__meta">
+											{story.data.author && <span>{story.data.author}</span>}
+											{story.data.date && <span>{fmt(story.data.date)}</span>}
+										</p>
+									</div>
+									<div class="story__body">
+										<h2 class="story__title">
+											<a href={`/stories/${pairKeyOf(story.id)}/`}>{story.data.title}</a>
+										</h2>
+										{
+											story.data.description && (
+												<p class="story__desc">{story.data.description}</p>
+											)
+										}
+										{
+											story.data.tags.length > 0 && (
+												<div class="story__tags">
+													{
+														story.data.tags.map((tag) => (
+															<span class="story__tag">{tag}</span>
+														))
+													}
+												</div>
+											)
+										}
+									</div>
+								</article>
+							))
+						}
+					</section>
+				</div>
+			)
+		}
+
+		<!-- ===== 故事列表（古代主题，无 .ancient 变体时回退共用现代版） ===== -->
+		{hasAncient && (
+			<div data-split="ancient">
 				<section class="story-list" aria-label="故事列表">
 					{
-						stories.map((story, i) => (
+						ancientList.map((story, i) => (
 							<article class="story">
 								<div class="story__side">
 									<p class="story__idx">{String(i + 1).padStart(2, '0')}</p>
@@ -48,7 +98,7 @@ const fmt = (d?: Date) => (d ? formatDate(d, defaultLang) : '');
 								</div>
 								<div class="story__body">
 									<h2 class="story__title">
-										<a href={`/stories/${story.id}/`}>{story.data.title}</a>
+										<a href={`/stories/${pairKeyOf(story.id)}/`}>{story.data.title}</a>
 									</h2>
 									{
 										story.data.description && (
@@ -71,8 +121,8 @@ const fmt = (d?: Date) => (d ? formatDate(d, defaultLang) : '');
 						))
 					}
 				</section>
-			)
-		}
+			</div>
+		)}
 	</main>
 </Layout>
 

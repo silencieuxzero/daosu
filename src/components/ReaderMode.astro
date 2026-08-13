@@ -110,7 +110,8 @@ const t = ui[locale] ?? ui[defaultLang];
 
 <script define:vars={{ pt: { mode: t['reader.mode'], close: t['reader.close'] } }}>
 	// ============================================================
-	// 沉浸阅读：克隆 .prose 正文到全屏层
+	// 沉浸阅读：克隆当前主题可见的 .prose 正文到全屏层
+	// 主题分套：页面可能含两套正文（data-split），只取当前主题那套
 	// ============================================================
 	const readerBtn = document.getElementById('reader-btn');
 	const overlay = document.getElementById('reader-overlay');
@@ -118,9 +119,25 @@ const t = ui[locale] ?? ui[defaultLang];
 	const readerBody = document.getElementById('reader-body');
 
 	if (readerBtn && overlay && closeBtn && readerBody) {
-		const proseEl = document.querySelector('.prose');
+		// 页面所有 .prose（排除阅读模式浮层内部的克隆）
+		const allProse = () =>
+			[...document.querySelectorAll('.prose')].filter(
+				(el) => !el.closest('#reader-overlay')
+			);
+
+		// 当前主题可见的 .prose（无 data-split 容器 = 未分套，直接取）
+		function visibleProse() {
+			const theme = document.documentElement.getAttribute('data-theme');
+			for (const el of allProse()) {
+				const split = el.closest('[data-split]');
+				if (!split) return el;
+				if (split.dataset.split === theme) return el;
+			}
+			return allProse()[0] ?? null;
+		}
 
 		function openReader() {
+			const proseEl = visibleProse();
 			if (!proseEl) return;
 			// 克隆正文（含文章头部与内容）
 			readerBody.textContent = '';
@@ -150,6 +167,6 @@ const t = ui[locale] ?? ui[defaultLang];
 		});
 
 		// 无正文（非文章页）时隐藏按钮
-		if (!proseEl) readerBtn.hidden = true;
+		if (allProse().length === 0) readerBtn.hidden = true;
 	}
 </script>

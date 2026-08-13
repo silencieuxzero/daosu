@@ -31,7 +31,8 @@ export interface SiteConfig {
 		songs: { title?: string; url?: string; bvid?: string }[];
 	};
 	gallery: {
-		images: { src: string; alt?: string }[];
+		modern: { src: string; alt?: string }[];
+		ancient: { src: string; alt?: string }[];
 	};
 	theme: {
 		default: string;
@@ -104,14 +105,25 @@ export const config: SiteConfig = {
 			: [],
 	},
 	gallery: {
-		images: Array.isArray(raw.gallery?.images)
-			? raw.gallery.images
+		// 兼容旧格式：仅配置 images 时两套共用
+		modern: Array.isArray(raw.gallery?.modern)
+			? raw.gallery.modern
 					.filter((x: any) => x && typeof x.src === 'string')
-					.map((x: any) => ({
-						src: x.src,
-						alt: typeof x.alt === 'string' ? x.alt : undefined,
-					}))
-			: [],
+					.map((x: any) => ({ src: x.src, alt: typeof x.alt === 'string' ? x.alt : undefined }))
+			: Array.isArray(raw.gallery?.images)
+				? raw.gallery.images
+						.filter((x: any) => x && typeof x.src === 'string')
+						.map((x: any) => ({ src: x.src, alt: typeof x.alt === 'string' ? x.alt : undefined }))
+				: [],
+		ancient: Array.isArray(raw.gallery?.ancient)
+			? raw.gallery.ancient
+					.filter((x: any) => x && typeof x.src === 'string')
+					.map((x: any) => ({ src: x.src, alt: typeof x.alt === 'string' ? x.alt : undefined }))
+			: Array.isArray(raw.gallery?.images)
+				? raw.gallery.images
+						.filter((x: any) => x && typeof x.src === 'string')
+						.map((x: any) => ({ src: x.src, alt: typeof x.alt === 'string' ? x.alt : undefined }))
+				: [],
 	},
 	decor: {
 		home: typeof raw.decor?.home === 'string' ? raw.decor.home : 'swiss',

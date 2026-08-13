@@ -1,31 +1,41 @@
 ---
 // 茶客详情页（内容集合驱动）：/guests/xxx/
+// 主题分套：同一 URL 下渲染现代/古代两套档案，切换主题即时显隐
 import Layout from '../../layouts/Layout.astro';
 import GuestProfile from '../../components/GuestProfile.astro';
 import { config } from '../../lib/config';
 import { getCollection, render } from 'astro:content';
+import { pairEntries, entryFor } from '../../lib/variants';
 
 export async function getStaticPaths() {
-	const guests = await getCollection('guests');
-	return guests.map((guest) => ({
-		params: { slug: guest.id },
-		props: { guest },
+	const all = await getCollection('guests');
+	// 配对键 → 两套变体（可能缺省）；URL 用配对键（剥离 .ancient）
+	return pairEntries(all).map((pair) => ({
+		params: { slug: pair.key },
+		props: { pair },
 	}));
 }
 
-const { guest } = Astro.props;
-const { Content } = await render(guest);
+const { pair } = Astro.props;
 
-// 上一篇 / 下一篇（按 order 排序）
-const all = (await getCollection('guests')).sort(
-	(a, b) => a.data.order - b.data.order
-);
-const idx = all.findIndex((g) => g.id === guest.id);
+// 现代版优先用于 <title> 与导航（pair 至少含一个变体，此处非空断言）
+const primary = (entryFor(pair, 'modern') ?? entryFor(pair, 'ancient'))!;
+const modernGuest: any = pair.modern ?? null;
+const ancientGuest: any = pair.ancient ?? null;
+const hasAncient = Boolean(ancientGuest);
+
+const modern = modernGuest ? (await render(modernGuest)).Content : null;
+const ancient = ancientGuest ? (await render(ancientGuest)).Content : null;
+
+// 上一篇 / 下一篇（按 order 排序的配对列表）
+const all = pairEntries(await getCollection('guests'));
+const idx = all.findIndex((p) => p.key === pair.key);
 const prev = idx > 0 ? all[idx - 1] : null;
 const next = idx >= 0 && idx < all.length - 1 ? all[idx + 1] : null;
+const navName = (p: any) => p.modern?.data.name ?? p.ancient?.data.name ?? '';
 ---
 
-<Layout title={`${guest.data.name} · 茶客设定 · ${config.site.name}`}>
+<Layout title={`${primary.data.name} · 茶客设定 · ${config.site.name}`}>
 	<main class="page">
 		<p class="back">
 			<a class="btn btn--outline" href="/guests/">
@@ -33,7 +43,19 @@ const next = idx >= 0 && idx < all.length - 1 ? all[idx + 1] : null;
 			</a>
 		</p>
 
-		<GuestProfile guest={guest} Content={Content} />
+		<!-- ===== 现代主题档案（无古代版时两主题共用，不附加 data-split） ===== -->
+		{modern && (
+			<div data-split={hasAncient ? 'modern' : undefined}>
+				<GuestProfile guest={modernGuest} Content={modern} />
+			</div>
+		)}
+
+		<!-- ===== 古代主题档案（无现代版时两主题共用，不附加 data-split） ===== -->
+		{hasAncient && (
+			<div data-split={modern ? 'ancient' : undefined}>
+				<GuestProfile guest={ancientGuest} Content={ancient} />
+			</div>
+		)}
 
 		<!-- ===== 其他茶客 ===== -->
 		{
@@ -41,9 +63,9 @@ const next = idx >= 0 && idx < all.length - 1 ? all[idx + 1] : null;
 				<nav class="guest-nav" aria-label="其他茶客">
 					{
 						prev ? (
-							<a class="guest-nav__item" href={`/guests/${prev.id}/`}>
+							<a class="guest-nav__item" href={`/guests/${prev.key}/`}>
 								<span class="guest-nav__dir">← 上一位</span>
-								<span class="guest-nav__name">{prev.data.name}</span>
+								<span class="guest-nav__name">{navName(prev)}</span>
 							</a>
 						) : (
 							<span></span>
@@ -51,9 +73,9 @@ const next = idx >= 0 && idx < all.length - 1 ? all[idx + 1] : null;
 					}
 					{
 						next ? (
-							<a class="guest-nav__item guest-nav__item--next" href={`/guests/${next.id}/`}>
+							<a class="guest-nav__item guest-nav__item--next" href={`/guests/${next.key}/`}>
 								<span class="guest-nav__dir">下一位 →</span>
-								<span class="guest-nav__name">{next.data.name}</span>
+								<span class="guest-nav__name">{navName(next)}</span>
 							</a>
 						) : (
 							<span></span>

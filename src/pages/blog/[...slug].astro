@@ -10,25 +10,38 @@ export async function getStaticPaths() {
 	const all = await getCollection('blog');
 	// 构建 slug → 可用语言映射（语言切换器只显示该文章存在的语言版本）
 	const slugLangs = new Map<string, string[]>();
+	// 按 lang/slug 配对现代/古代变体（同一 URL 双套内容）
+	const byKey = new Map<string, { lang: string; post?: any; ancient?: any }>();
 	for (const post of all) {
-		const { lang, slug } = parsePostId(post.id);
+		const { lang, slug, theme } = parsePostId(post.id);
 		const list = slugLangs.get(slug) ?? [];
-		list.push(lang);
+		if (!list.includes(lang)) list.push(lang);
 		slugLangs.set(slug, list);
+		const key = `${lang}/${slug}`;
+		const rec = byKey.get(key) ?? { lang };
+		if (theme === 'ancient') rec.ancient = post;
+		else rec.post = post;
+		byKey.set(key, rec);
 	}
-	const posts = all.filter((post) => parsePostId(post.id).lang === 'zh');
-	return posts.map((post) => {
-		const slug = parsePostId(post.id).slug;
-		return {
-			params: { slug },
-			props: { post, availableLangs: slugLangs.get(slug) ?? ['zh'] },
-		};
-	});
+	// 只生成本语言页面；变体缺省时回退（post 优先 modern，缺省用 ancient）
+	return [...byKey.entries()]
+		.filter(([, rec]) => rec.lang === 'zh')
+		.map(([key, rec]) => {
+			const slug = key.slice(key.indexOf('/') + 1);
+			return {
+				params: { slug },
+				props: {
+					post: rec.post ?? rec.ancient,
+					ancient: rec.ancient ?? null,
+					availableLangs: slugLangs.get(slug) ?? ['zh'],
+				},
+			};
+		});
 }
 
-const { post, availableLangs } = Astro.props;
+const { post, ancient, availableLangs } = Astro.props;
 ---
 
 <Layout title={`${post.data.title} · ${config.site.name}`} availableLangs={availableLangs}>
-	<PostPage post={post} locale="zh" />
+	<PostPage post={post} ancient={ancient} locale="zh" />
 </Layout>

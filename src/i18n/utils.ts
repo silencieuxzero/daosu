@@ -21,13 +21,28 @@ export function localizedPath(path: string, to: Lang): string {
 	return `/${to}${clean === '/' ? '' : clean}`;
 }
 
-/** 文章 id 解析：zh 文章 id 无前缀，en/it 文章 id 带语言目录前缀 */
-export function parsePostId(id: string): { lang: Lang; slug: string } {
-	const parts = id.split('/');
-	if (parts.length === 2 && (parts[0] === 'en' || parts[0] === 'it')) {
-		return { lang: parts[0], slug: parts[1] };
+/**
+ * 文章 id 解析：zh 文章 id 无前缀，en/it 文章 id 带语言目录前缀；
+ * 主题变体：ancient/ 段（如 ancient/xxx 或 en/ancient/xxx）为古代版，
+ * slug 剥离该段，与 modern 共用 URL
+ */
+export function parsePostId(id: string): {
+	lang: Lang;
+	slug: string;
+	theme: 'modern' | 'ancient';
+} {
+	let rest = id;
+	let lang: Lang = defaultLang;
+	if (rest.startsWith('en/') || rest.startsWith('it/')) {
+		const idx = rest.indexOf('/');
+		lang = rest.slice(0, idx) as Lang;
+		rest = rest.slice(idx + 1);
 	}
-	return { lang: defaultLang, slug: id };
+	const theme: 'modern' | 'ancient' = rest.startsWith('ancient/')
+		? 'ancient'
+		: 'modern';
+	const slug = theme === 'ancient' ? rest.slice('ancient/'.length) : rest;
+	return { lang, slug, theme };
 }
 
 /** 日期格式化：2026.08.03（zh）/ Aug 3, 2026（en）/ 3 ago 2026（it） */

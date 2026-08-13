@@ -1,33 +1,44 @@
 ---
 // 茶馆故事详情页（内容集合驱动）：/stories/xxx/
+// 主题分套：同一 URL 下渲染现代/古代两套故事，切换主题即时显隐
 import Layout from '../../layouts/Layout.astro';
 import { config } from '../../lib/config';
 import { getCollection, render } from 'astro:content';
 import { formatDate, defaultLang } from '../../i18n/utils';
+import { pairEntries, entryFor } from '../../lib/variants';
 
 export async function getStaticPaths() {
-	const stories = await getCollection('stories');
-	return stories.map((story) => ({
-		params: { slug: story.id },
-		props: { story },
+	const all = await getCollection('stories');
+	// 配对键 → 两套变体（可能缺省）；URL 用配对键（剥离 .ancient）
+	return pairEntries(all).map((pair) => ({
+		params: { slug: pair.key },
+		props: { pair },
 	}));
 }
 
-const { story } = Astro.props;
-const { Content } = await render(story);
+const { pair } = Astro.props;
 
-// 上一篇 / 下一篇（按 order 排序）
-const all = (await getCollection('stories')).sort(
-	(a, b) => a.data.order - b.data.order
-);
-const idx = all.findIndex((s) => s.id === story.id);
+// 现代版优先用于 <title> 与导航（pair 至少含一个变体，此处非空断言）
+const primary = (entryFor(pair, 'modern') ?? entryFor(pair, 'ancient'))!;
+const modernStory: any = pair.modern ?? null;
+const ancientStory: any = pair.ancient ?? null;
+const hasAncient = Boolean(ancientStory);
+
+// 注意：模板中直接渲染的组件变量必须以大写开头，否则会被当作 HTML 元素
+const ModernContent: any = modernStory ? (await render(modernStory)).Content : null;
+const AncientContent: any = ancientStory ? (await render(ancientStory)).Content : null;
+
+// 上一篇 / 下一篇（按 order 排序的配对列表）
+const all = pairEntries(await getCollection('stories'));
+const idx = all.findIndex((p) => p.key === pair.key);
 const prev = idx > 0 ? all[idx - 1] : null;
 const next = idx >= 0 && idx < all.length - 1 ? all[idx + 1] : null;
+const navName = (p: any) => p.modern?.data.title ?? p.ancient?.data.title ?? '';
 
 const fmt = (d?: Date) => (d ? formatDate(d, defaultLang) : '');
 ---
 
-<Layout title={`${story.data.title} · 茶馆故事 · ${config.site.name}`}>
+<Layout title={`${primary.data.title} · 茶馆故事 · ${config.site.name}`}>
 	<main class="page">
 		<p class="back">
 			<a class="btn btn--outline" href="/stories/">
@@ -35,41 +46,69 @@ const fmt = (d?: Date) => (d ? formatDate(d, defaultLang) : '');
 			</a>
 		</p>
 
-		<article class="prose">
-			<header class="story-head">
-				<span class="seal" aria-hidden="true">故</span>
-				<p class="kicker">
-					{story.data.author && <span>{story.data.author}</span>}
-					{story.data.date && <span> · {fmt(story.data.date)}</span>}
-				</p>
-				<h1>{story.data.title}</h1>
-				{
-					story.data.description && (
-						<p class="story-head__desc">{story.data.description}</p>
-					)
-				}
-				{
-					story.data.tags.length > 0 && (
-						<div class="story-head__tags">
-							{
-								story.data.tags.map((tag) => (
+		<!-- ===== 现代主题故事（无古代版时两主题共用，不附加 data-split） ===== -->
+		{ModernContent && (
+			<div data-split={AncientContent ? 'modern' : undefined}>
+				<article class="prose">
+					<header class="story-head">
+						<span class="seal" aria-hidden="true">故</span>
+						<p class="kicker">
+							{modernStory.data.author && <span>{modernStory.data.author}</span>}
+							{modernStory.data.date && <span> · {fmt(modernStory.data.date)}</span>}
+						</p>
+						<h1>{modernStory.data.title}</h1>
+						{modernStory.data.description && (
+							<p class="story-head__desc">{modernStory.data.description}</p>
+						)}
+						{modernStory.data.tags.length > 0 && (
+							<div class="story-head__tags">
+								{modernStory.data.tags.map((tag: string) => (
 									<span class="story-head__tag">{tag}</span>
-								))
-							}
-						</div>
-					)
-				}
-			</header>
-			<Content />
-		</article>
+								))}
+							</div>
+						)}
+					</header>
+					<ModernContent />
+				</article>
+				{modernStory.data.source && (
+					<p class="story__source">
+						故事来源：{modernStory.data.source} · CC-BY-SA
+					</p>
+				)}
+			</div>
+		)}
 
-		{
-			story.data.source && (
-				<p class="story__source">
-					故事来源：{story.data.source} · CC-BY-SA
-				</p>
-			)
-		}
+		<!-- ===== 古代主题故事（无现代版时两主题共用，不附加 data-split） ===== -->
+		{hasAncient && (
+			<div data-split={ModernContent ? 'ancient' : undefined}>
+				<article class="prose">
+					<header class="story-head">
+						<span class="seal" aria-hidden="true">故</span>
+						<p class="kicker">
+							{ancientStory.data.author && <span>{ancientStory.data.author}</span>}
+							{ancientStory.data.date && <span> · {fmt(ancientStory.data.date)}</span>}
+						</p>
+						<h1>{ancientStory.data.title}</h1>
+						{ancientStory.data.description && (
+							<p class="story-head__desc">{ancientStory.data.description}</p>
+						)}
+						{ancientStory.data.tags.length > 0 && (
+							<div class="story-head__tags">
+								{ancientStory.data.tags.map((tag: string) => (
+									<span class="story-head__tag">{tag}</span>
+								))}
+							</div>
+						)}
+					</header>
+					<AncientContent />
+				</article>
+				{ancientStory.data.source && (
+					<p class="story__source">
+						故事来源：{ancientStory.data.source} · CC-BY-SA
+					</p>
+				)}
+			</div>
+		)}
 
 		<!-- ===== 其他故事 ===== -->
 		{
@@ -77,9 +116,9 @@ const fmt = (d?: Date) => (d ? formatDate(d, defaultLang) : '');
 				<nav class="story-nav" aria-label="其他故事">
 					{
 						prev ? (
-							<a class="story-nav__item" href={`/stories/${prev.id}/`}>
+							<a class="story-nav__item" href={`/stories/${prev.key}/`}>
 								<span class="story-nav__dir">← 上一篇</span>
-								<span class="story-nav__name">{prev.data.title}</span>
+								<span class="story-nav__name">{navName(prev)}</span>
 							</a>
 						) : (
 							<span></span>
@@ -87,9 +126,9 @@ const fmt = (d?: Date) => (d ? formatDate(d, defaultLang) : '');
 					}
 					{
 						next ? (
-							<a class="story-nav__item story-nav__item--next" href={`/stories/${next.id}/`}>
+							<a class="story-nav__item story-nav__item--next" href={`/stories/${next.key}/`}>
 								<span class="story-nav__dir">下一篇 →</span>
-								<span class="story-nav__name">{next.data.title}</span>
+								<span class="story-nav__name">{navName(next)}</span>
 							</a>
 						) : (
 							<span></span>

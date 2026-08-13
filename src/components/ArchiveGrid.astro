@@ -1,18 +1,29 @@
 ---
 // 归档页（三语共用）：卡片网格展示全部文章
+// 主题分套：现代/古代各一套列表（.ancient 变体），切换主题即时显隐
 import { getCollection } from 'astro:content';
 import { ui, defaultLang } from '../i18n/ui';
 import { parsePostId, formatDate, type Lang } from '../i18n/utils';
+import { pairEntriesByDate, entryFor, isDefined } from '../lib/variants';
 
 const { locale = defaultLang } = Astro.props as { locale?: Lang };
 const t = ui[locale] ?? ui[defaultLang];
 
 const posts = (await getCollection('blog'))
-	.filter((post) => parsePostId(post.id).lang === locale)
-	.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+	.filter((post) => parsePostId(post.id).lang === locale);
+
+// 按配对键合并变体，按日期降序
+const pairs = pairEntriesByDate(posts);
+const hasAncient = pairs.some((p) => p.ancient);
+
+// 两套列表（古代缺省回退现代版）
+const modernList = pairs.map((p) => entryFor(p, 'modern')).filter(isDefined);
+const ancientList = pairs.map((p) => entryFor(p, 'ancient')).filter(isDefined);
 
 const postUrl = (slug: string) =>
 	locale === defaultLang ? `/blog/${slug}/` : `/${locale}/blog/${slug}/`;
+
+const fmtDate = (p: any) => formatDate(p.data.date, locale);
 ---
 
 <main>
@@ -22,39 +33,73 @@ const postUrl = (slug: string) =>
 		<p class="kicker">{t['archive.kicker']}</p>
 		<h1 class="arch-head__title">{t['archive.title']}</h1>
 		<p class="arch-head__desc">{t['archive.desc']}</p>
-		<p class="arch-head__meta">{t['archive.count'].replace('{n}', String(posts.length))}</p>
+		<p class="arch-head__meta">{t['archive.count'].replace('{n}', String(pairs.length))}</p>
 	</header>
 
 	<!-- 回纹条带（仅古代主题） -->
 	<div class="band" aria-hidden="true"></div>
 
-	<!-- ===== 卡片网格 ===== -->
-	<section class="cards" aria-label="archive">
-		{
-			posts.map((post) => (
-				<article class="card">
-					<time class="card__date" datetime={post.data.date.toISOString()}>
-						{formatDate(post.data.date, locale)}
-					</time>
-					<h2 class="card__title">
-						<a href={postUrl(parsePostId(post.id).slug)}>{post.data.title}</a>
-					</h2>
-					{
-						post.data.description && (
-							<p class="card__desc">{post.data.description}</p>
-						)
-					}
-					<div class="card__tags">
+	<!-- ===== 卡片网格（现代主题；无古代版时两主题共用，不附加 data-split） ===== -->
+	<div data-split={hasAncient ? 'modern' : undefined}>
+		<section class="cards" aria-label="archive">
+			{
+				modernList.map((post) => (
+					<article class="card">
+						<time class="card__date" datetime={post.data.date.toISOString()}>
+							{fmtDate(post)}
+						</time>
+						<h2 class="card__title">
+							<a href={postUrl(parsePostId(post.id).slug)}>{post.data.title}</a>
+						</h2>
 						{
-							post.data.tags.map((tag) => (
-								<span class="card__tag">{tag}</span>
-							))
+							post.data.description && (
+								<p class="card__desc">{post.data.description}</p>
+							)
 						}
-					</div>
-				</article>
-			))
-		}
-	</section>
+						<div class="card__tags">
+							{
+								post.data.tags.map((tag) => (
+									<span class="card__tag">{tag}</span>
+								))
+							}
+						</div>
+					</article>
+				))
+			}
+		</section>
+	</div>
+
+	<!-- ===== 卡片网格（古代主题，无 .ancient 变体时回退共用现代版） ===== -->
+	{hasAncient && (
+		<div data-split="ancient">
+			<section class="cards" aria-label="archive">
+				{
+					ancientList.map((post) => (
+						<article class="card">
+							<time class="card__date" datetime={post.data.date.toISOString()}>
+								{fmtDate(post)}
+							</time>
+							<h2 class="card__title">
+								<a href={postUrl(parsePostId(post.id).slug)}>{post.data.title}</a>
+							</h2>
+							{
+								post.data.description && (
+									<p class="card__desc">{post.data.description}</p>
+								)
+							}
+							<div class="card__tags">
+								{
+									post.data.tags.map((tag) => (
+										<span class="card__tag">{tag}</span>
+									))
+								}
+							</div>
+						</article>
+					))
+				}
+			</section>
+		</div>
+	)}
 </main>
 
 <style>

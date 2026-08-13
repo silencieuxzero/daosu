@@ -117,14 +117,25 @@ export const music = {
 
 // ---------- 画廊 ----------
 // 图片列表：src 为 public 下的路径或外部 URL；alt 为说明文字
+// 主题分套：modern（现代主题显示）与 ancient（古代主题显示）各一套图集
 export const gallery = {
-	images: [
+	// 现代主题图集
+	modern: [
 		{ src: '/gallery/01-rect.svg', alt: '回纹 · 现代几何' },
 		{ src: '/gallery/02-grid.svg', alt: '瑞士网格' },
 		{ src: '/gallery/03-bronze.svg', alt: '青铜纹样' },
 		{ src: '/gallery/04-bars.svg', alt: '垂直条带' },
 		{ src: '/gallery/05-target.svg', alt: '同心圆' },
 		{ src: '/gallery/06-diagonal.svg', alt: '斜线构成' },
+	],
+	// 古代主题图集
+	ancient: [
+		{ src: '/gallery/07-meander.svg', alt: '回纹连缀' },
+		{ src: '/gallery/08-thunder.svg', alt: '云雷纹' },
+		{ src: '/gallery/09-taotie.svg', alt: '兽面纹' },
+		{ src: '/gallery/10-rings.svg', alt: '重环纹' },
+		{ src: '/gallery/11-quchi.svg', alt: '窃曲纹' },
+		{ src: '/gallery/12-lattice.svg', alt: '菱形格纹' },
 	],
 };
 

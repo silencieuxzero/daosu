@@ -3,12 +3,17 @@ import Layout from '../layouts/Layout.astro';
 import { config } from '../lib/config';
 import { getCollection } from 'astro:content';
 
-// 茶客索引：来自 src/content/guests/*.md，按 order 排序（不含正文，正文在详情页）
+// 茶客索引：来自 src/content/guests/*.md（+ .ancient 古代版），按 order 排序
+// 主题分套：现代/古代各一套卡片，切换主题即时显隐
 import { statusTextStyle } from '../lib/status';
+import { pairEntries, entryFor, pairKeyOf, isDefined } from '../lib/variants';
 
-const guests = (await getCollection('guests')).sort(
-	(a, b) => a.data.order - b.data.order
-);
+const guests = pairEntries(await getCollection('guests'));
+const hasAncient = guests.some((g) => g.ancient);
+
+// 两套列表（古代缺省回退现代版）
+const modernList = guests.map((p) => entryFor(p, 'modern')).filter(isDefined);
+const ancientList = guests.map((p) => entryFor(p, 'ancient')).filter(isDefined);
 ---
 
 <Layout title={`茶客设定 · ${config.site.name}`}>
@@ -26,51 +31,103 @@ const guests = (await getCollection('guests')).sort(
 		<!-- 回纹条带（仅古代主题） -->
 		<div class="band" aria-hidden="true"></div>
 
-		<!-- ===== 茶客卡片网格（索引） ===== -->
-		<section class="guest-grid" aria-label="茶客列表">
-			{
-				guests.map((guest, i) => (
-					<article class="guest-card">
-						<a class="guest-card__link" href={`/guests/${guest.id}/`}>
-							<div class="guest-card__img">
-								{
-									guest.data.portrait ? (
-										<img
-											src={guest.data.portrait}
-											alt={`${guest.data.name}的立绘`}
-											loading="lazy"
-										/>
-									) : (
-										<span class="guest-card__placeholder" aria-hidden="true">
-											{guest.data.name.charAt(0)}
+		<!-- ===== 茶客卡片网格（现代主题；无古代版时两主题共用，不附加 data-split） ===== -->
+		<div data-split={hasAncient ? 'modern' : undefined}>
+			<section class="guest-grid" aria-label="茶客列表">
+				{
+					modernList.map((guest, i) => (
+						<article class="guest-card">
+							<a class="guest-card__link" href={`/guests/${pairKeyOf(guest.id)}/`}>
+								<div class="guest-card__img">
+									{
+										guest.data.portrait ? (
+											<img
+												src={guest.data.portrait}
+												alt={`${guest.data.name}的立绘`}
+												loading="lazy"
+											/>
+										) : (
+											<span class="guest-card__placeholder" aria-hidden="true">
+												{guest.data.name.charAt(0)}
+											</span>
+										)
+									}
+								</div>
+								<div class="guest-card__body">
+									<p class="guest-card__idx">NO.{String(i + 1).padStart(2, '0')}</p>
+									<h2 class="guest-card__name">{guest.data.name}</h2>
+									{
+										guest.data.description && (
+											<p class="guest-card__desc">{guest.data.description}</p>
+										)
+									}
+									<p class="guest-card__meta">
+										{guest.data.identity} ·{' '}
+										<span
+											class="guest-card__status"
+											data-status={guest.data.status}
+											style={statusTextStyle(String(guest.data.status ?? ''))}
+										>
+											{guest.data.status}
 										</span>
-									)
-								}
-							</div>
-							<div class="guest-card__body">
-								<p class="guest-card__idx">NO.{String(i + 1).padStart(2, '0')}</p>
-								<h2 class="guest-card__name">{guest.data.name}</h2>
-								{
-									guest.data.description && (
-										<p class="guest-card__desc">{guest.data.description}</p>
-									)
-								}
-								<p class="guest-card__meta">
-									{guest.data.identity} ·{' '}
-									<span
-										class="guest-card__status"
-										data-status={guest.data.status}
-										style={statusTextStyle(String(guest.data.status ?? ''))}
-									>
-										{guest.data.status}
-									</span>
-								</p>
-							</div>
-						</a>
-					</article>
-				))
-			}
-		</section>
+									</p>
+								</div>
+							</a>
+						</article>
+					))
+				}
+			</section>
+		</div>
+
+		<!-- ===== 茶客卡片网格（古代主题，无 .ancient 变体时回退共用现代版） ===== -->
+		{hasAncient && (
+			<div data-split="ancient">
+				<section class="guest-grid" aria-label="茶客列表">
+					{
+						ancientList.map((guest, i) => (
+							<article class="guest-card">
+								<a class="guest-card__link" href={`/guests/${pairKeyOf(guest.id)}/`}>
+									<div class="guest-card__img">
+										{
+											guest.data.portrait ? (
+												<img
+													src={guest.data.portrait}
+													alt={`${guest.data.name}的立绘`}
+													loading="lazy"
+												/>
+											) : (
+												<span class="guest-card__placeholder" aria-hidden="true">
+													{guest.data.name.charAt(0)}
+												</span>
+											)
+										}
+									</div>
+									<div class="guest-card__body">
+										<p class="guest-card__idx">NO.{String(i + 1).padStart(2, '0')}</p>
+										<h2 class="guest-card__name">{guest.data.name}</h2>
+										{
+											guest.data.description && (
+												<p class="guest-card__desc">{guest.data.description}</p>
+											)
+										}
+										<p class="guest-card__meta">
+											{guest.data.identity} ·{' '}
+											<span
+												class="guest-card__status"
+												data-status={guest.data.status}
+												style={statusTextStyle(String(guest.data.status ?? ''))}
+											>
+												{guest.data.status}
+											</span>
+										</p>
+									</div>
+								</a>
+							</article>
+						))
+					}
+				</section>
+			</div>
+		)}
 	</main>
 </Layout>
 

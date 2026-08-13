@@ -215,7 +215,9 @@ const t = ui[locale] ?? ui[defaultLang];
 
 <script define:vars={{ pt: { open: t['toc.open'], close: t['toc.close'], title: t['toc.title'] } }}>
 	// ============================================================
-	// 目录逻辑：从 .prose 提取 h2-h4，IO 高亮当前章节
+	// 目录逻辑：从当前可见的 .prose 提取 h2-h4，IO 高亮当前章节
+	// 主题分套：页面可能含两套正文（data-split），只索引当前主题那套；
+	// 切换主题时（data-theme 变化）自动重建目录
 	// ============================================================
 	const wrapper = document.getElementById('toc');
 	const toggleBtn = document.getElementById('toc-btn');
@@ -226,12 +228,48 @@ const t = ui[locale] ?? ui[defaultLang];
 	if (!wrapper || !toggleBtn || !closeBtn || !tocList || !panel) {
 		// 组件缺失时静默
 	} else {
-		const proseEl = document.querySelector('.prose');
-		const headings = proseEl ? proseEl.querySelectorAll('h2, h3, h4') : [];
+		// 页面所有 .prose（排除阅读模式浮层内部的克隆）
+		const allProse = () =>
+			[...document.querySelectorAll('.prose')].filter(
+				(el) => !el.closest('#reader-overlay')
+			);
 
-		if (!proseEl || headings.length === 0) {
-			wrapper.hidden = true; // 无正文标题时整组隐藏
-		} else {
+		// 当前主题可见的 .prose（无 data-split 容器 = 未分套，直接取）
+		function visibleProse() {
+			const theme = document.documentElement.getAttribute('data-theme');
+			for (const el of allProse()) {
+				const split = el.closest('[data-split]');
+				if (!split) return el;
+				if (split.dataset.split === theme) return el;
+			}
+			return allProse()[0] ?? null;
+		}
+
+		let observer = null;
+		let links = [];
+
+		function setOpen(open) {
+			wrapper.classList.toggle('is-open', open);
+			toggleBtn.classList.toggle('is-open', open);
+			toggleBtn.setAttribute('aria-expanded', String(open));
+		}
+
+		function buildToc() {
+			// 清理旧目录与旧 observer
+			tocList.textContent = '';
+			if (observer) {
+				observer.disconnect();
+				observer = null;
+			}
+			links = [];
+
+			const proseEl = visibleProse();
+			const headings = proseEl ? proseEl.querySelectorAll('h2, h3, h4') : [];
+
+			if (!proseEl || headings.length === 0) {
+				wrapper.hidden = true; // 无正文标题时整组隐藏
+				return;
+			}
 			wrapper.hidden = false;
 
 			// 生成锚点与目录项
@@ -242,12 +280,12 @@ const t = ui[locale] ?? ui[defaultLang];
 				}
 				items.push({
 					id: heading.id,
+					el: heading,
 					text: heading.textContent?.trim() || '',
 					level: parseInt(heading.tagName.charAt(1), 10),
 				});
 			});
 
-			tocList.textContent = '';
 			items.forEach((item) => {
 				const li = document.createElement('li');
 				li.className = `toc__item toc__item--h${item.level}`;
@@ -256,46 +294,25 @@ const t = ui[locale] ?? ui[defaultLang];
 				a.textContent = item.text;
 				a.addEventListener('click', (e) => {
 					e.preventDefault();
-					document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+					// 直接滚动到保存的元素引用：两套正文可能出现同名标题 id，
+					// getElementById 会定位到被隐藏容器里的元素，引用则始终正确
+					item.el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 					setOpen(false);
 				});
 				li.appendChild(a);
 				tocList.appendChild(li);
+				links.push({ a, el: item.el });
 			});
 
-			// 展开/收起
-			function setOpen(open) {
-				wrapper.classList.toggle('is-open', open);
-				toggleBtn.classList.toggle('is-open', open);
-				toggleBtn.setAttribute('aria-expanded', String(open));
-			}
-
-			toggleBtn.addEventListener('click', () => {
-				setOpen(!wrapper.classList.contains('is-open'));
-			});
-			closeBtn.addEventListener('click', () => setOpen(false));
-			document.addEventListener('click', (e) => {
-				if (wrapper.classList.contains('is-open') && !wrapper.contains(e.target)) {
-					setOpen(false);
-				}
-			});
-			document.addEventListener('keydown', (e) => {
-				if (e.key === 'Escape' && wrapper.classList.contains('is-open')) {
-					setOpen(false);
-					toggleBtn.focus();
-				}
-			});
-
-			// 高亮当前章节
-			const links = tocList.querySelectorAll('a');
-			const observer = new IntersectionObserver(
+			// 高亮当前章节（按元素引用比较）
+			observer = new IntersectionObserver(
 				(entries) => {
 					entries.forEach((entry) => {
 						if (entry.isIntersecting) {
-							links.forEach((link) => {
-								link.parentElement.classList.toggle(
+							links.forEach(({ a, el }) => {
+								a.parentElement.classList.toggle(
 									'toc__item--active',
-									link.getAttribute('href') === `#${entry.target.id}`
+									el === entry.target
 								);
 							});
 						}
@@ -305,5 +322,31 @@ const t = ui[locale] ?? ui[defaultLang];
 			);
 			headings.forEach((h) => observer.observe(h));
 		}
+
+		buildToc();
+
+		// 展开/收起（只绑定一次）
+		toggleBtn.addEventListener('click', () => {
+			setOpen(!wrapper.classList.contains('is-open'));
+		});
+		closeBtn.addEventListener('click', () => setOpen(false));
+		document.addEventListener('click', (e) => {
+			if (wrapper.classList.contains('is-open') && !wrapper.contains(e.target)) {
+				setOpen(false);
+			}
+		});
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape' && wrapper.classList.contains('is-open')) {
+				setOpen(false);
+				toggleBtn.focus();
+			}
+		});
+
+		// 主题切换（内容分套显隐）时重建目录
+		const themeObserver = new MutationObserver(() => buildToc());
+		themeObserver.observe(document.documentElement, {
+			attributes: true,
+			attributeFilter: ['data-theme'],
+		});
 	}
 </script>

@@ -13,7 +13,7 @@ order: 2
 puzzle:
   question: 实验室炸毁那夜，半截标牌背面写着一个名字。那是谁的名字？
   answer: Xavier
-  era: 1
+  era: -1  # 作答框显示档位：timeline 的 era 序号；-1 = 完整档案档
   hint: 一个意识，被封存在最深的记忆里。Ta 说 Ta 就是我。
   reveal: |
     Xavier 说，Ta 就是我，我就是 Ta。实验室被毁时，Ta 把自己封存起来，让我忘掉一切才能活下来。

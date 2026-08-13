@@ -34,7 +34,7 @@ const guests = defineCollection({
         answer: z.string(),            // 答案（校验忽略大小写与首尾空格）
         hint: z.string().optional(),   // 提示（答错后可查看）
         reveal: z.string().optional(), // 揭晓文本（markdown，支持黑幕）
-        era: z.number().optional(),    // 作答框显示的时间点（timeline[].era）；缺省 = 完整档案（full）
+        era: z.number().optional(),    // 作答框显示的时间点（timeline[].era）；-1 = 完整档案档；缺省同 -1
       })
       .optional(), // 谜题（可选）：档案页显示答案校验
     timeline: z

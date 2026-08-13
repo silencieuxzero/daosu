@@ -102,7 +102,7 @@ if (hasTimeline) {
 	{
 		guest.data.puzzle && (
 			hasTimeline ? (
-				<div data-era-block={guest.data.puzzle.era ?? 'full'}>
+				<div data-era-block={guest.data.puzzle.era === -1 ? 'full' : (guest.data.puzzle.era ?? 'full')}>
 					<PuzzleBox puzzle={guest.data.puzzle} revealHtml={puzzleRevealHtml} />
 				</div>
 			) : (

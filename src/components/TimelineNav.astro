@@ -12,10 +12,12 @@ interface TimelineItem {
 	theme?: string;
 }
 
-const { timeline = null, locale = 'zh' } = Astro.props as {
+const { timeline = null, locale = 'zh', variant = 'desktop' } = Astro.props as {
 	timeline?: TimelineItem[] | null;
 	locale?: string;
+	variant?: 'desktop' | 'mobile'; // mobile = 汉堡菜单内实例（移动端专用布局）
 };
+const isMobile = variant === 'mobile';
 
 // 无页面时间线 → 默认两节点：古代（ancient）/ 现代（modern）
 const DEFAULT_ITEMS: TimelineItem[] = [
@@ -30,9 +32,9 @@ const items: TimelineItem[] = hasPageTimeline
 const last = items.length - 1;
 ---
 
-<div class="tl-nav">
+<div class:list={['tl-nav', { 'tl-nav--mobile': isMobile }]}>
 	<button
-		id="tl-nav-toggle"
+		id={isMobile ? 'tl-nav-toggle-m' : 'tl-nav-toggle'}
 		class="tl-nav__toggle"
 		type="button"
 		aria-haspopup="true"
@@ -42,7 +44,7 @@ const last = items.length - 1;
 		<span class="tl-nav__caret" aria-hidden="true">▾</span>
 	</button>
 
-	<div id="tl-nav-panel" class="tl-nav__panel" hidden>
+	<div id={isMobile ? 'tl-nav-panel-m' : 'tl-nav-panel'} class="tl-nav__panel" hidden>
 		<header class="tl-nav__head">
 			<span class="tl-nav__kicker">时间线 · TIMELINE</span>
 			<span class="tl-nav__hint">拖动滑块查看不同时期</span>
@@ -87,102 +89,114 @@ const last = items.length - 1;
 	};
 	const themeLabels = THEME_LABELS[locale] ?? THEME_LABELS.zh;
 
-	const toggle = document.getElementById('tl-nav-toggle');
-	const panel = document.getElementById('tl-nav-panel');
-	const range = panel ? panel.querySelector('.tl-nav__range') : null;
-	const marks = panel ? Array.from(panel.querySelectorAll('.tl-nav__mark')) : [];
-	const scenes = panel ? Array.from(panel.querySelectorAll('.tl-nav__scene')) : [];
+	// 桌面导航与移动端汉堡菜单各有一个 .tl-nav 实例，统一遍历初始化；
+	// dataset 标记保证幂等（脚本可能被去重执行或重复打包）。
+	document.querySelectorAll('.tl-nav').forEach((root) => {
+		if (root.dataset.tlNavReady) return;
+		root.dataset.tlNavReady = '1';
 
-	if (toggle && panel) {
-		toggle.addEventListener('click', (e) => {
-			e.stopPropagation();
-			panel.hidden = !panel.hidden;
-			toggle.setAttribute('aria-expanded', String(!panel.hidden));
-			if (!panel.hidden) fitPanelWidth();
-		});
+		const toggle = root.querySelector('.tl-nav__toggle');
+		const panel = root.querySelector('.tl-nav__panel');
+		const range = panel ? panel.querySelector('.tl-nav__range') : null;
+		const marks = panel ? Array.from(panel.querySelectorAll('.tl-nav__mark')) : [];
+		const scenes = panel ? Array.from(panel.querySelectorAll('.tl-nav__scene')) : [];
 
-		// 捕获阶段：点击页面任意处先关闭本卡片
-		document.addEventListener(
-			'click',
-			(e) => {
-				if (
-					!panel.hidden &&
-					(!(e.target instanceof Node) || !panel.contains(e.target)) &&
-					e.target !== toggle
-				) {
+		if (toggle && panel) {
+			toggle.addEventListener('click', (e) => {
+				e.stopPropagation();
+				panel.hidden = !panel.hidden;
+				toggle.setAttribute('aria-expanded', String(!panel.hidden));
+				if (!panel.hidden) fitPanelWidth();
+			});
+
+			// 捕获阶段：点击页面任意处先关闭本卡片
+			document.addEventListener(
+				'click',
+				(e) => {
+					if (
+						!panel.hidden &&
+						(!(e.target instanceof Node) || !panel.contains(e.target)) &&
+						e.target !== toggle
+					) {
+						panel.hidden = true;
+						toggle.setAttribute('aria-expanded', 'false');
+					}
+				},
+				true
+			);
+
+			document.addEventListener('keydown', (e) => {
+				if (e.key === 'Escape' && !panel.hidden) {
 					panel.hidden = true;
 					toggle.setAttribute('aria-expanded', 'false');
-			}
-			},
-			true
-		);
-
-		document.addEventListener('keydown', (e) => {
-			if (e.key === 'Escape' && !panel.hidden) {
-				panel.hidden = true;
-				toggle.setAttribute('aria-expanded', 'false');
-				toggle.focus();
-			}
-		});
-	}
-
-	// 场景显隐（索引匹配）
-	function syncScenes() {
-		if (!range) return;
-		const v = Number(range.value);
-		scenes.forEach((s, i) => s.classList.toggle('is-active', i === v));
-		marks.forEach((m) => m.classList.toggle('is-active', Number(m.dataset.era) === v));
-	}
-
-	function syncFooterTheme(theme) {
-		const el = document.getElementById('footer-theme');
-		if (el) el.textContent = theme === 'ancient' ? themeLabels.ancient : themeLabels.modern;
-	}
-
-	function applyEra() {
-		if (!range) return;
-		const v = hasPageTimeline && Number(range.value) === Number(range.max) ? 'full' : String(range.value);
-		const root = document.documentElement;
-		root.setAttribute('data-era', v);
-		const mark = marks.find((m) => String(m.dataset.era) === v);
-		const theme = mark && mark.dataset.theme ? mark.dataset.theme : null;
-		if (theme) {
-			root.setAttribute('data-theme', theme);
-			syncFooterTheme(theme);
+					toggle.focus();
+				}
+			});
 		}
-	}
 
-	// 首尾刻度与滑块按钮对齐：整体平移（半宽 - 10px）
-	function fitPanelWidth() {
-		if (!panel || panel.hidden || !range) return;
-		let maxW = 0;
-		marks.forEach((m) => { maxW = Math.max(maxW, m.offsetWidth); });
-		const ml = Math.max(0, (marks[0] ? marks[0].offsetWidth : 0) / 2 - 10);
-		const mr = Math.max(0, (marks.length ? marks[marks.length - 1].offsetWidth : 0) / 2 - 10);
-		const marksEl = panel.querySelector('.tl-nav__marks');
-		if (marksEl) {
-			marksEl.style.marginLeft = ml + 'px';
-			marksEl.style.marginRight = mr + 'px';
+		// 场景显隐（索引匹配）
+		function syncScenes() {
+			if (!range) return;
+			const v = Number(range.value);
+			scenes.forEach((s, i) => s.classList.toggle('is-active', i === v));
+			marks.forEach((m) => m.classList.toggle('is-active', Number(m.dataset.era) === v));
 		}
-		range.style.marginLeft = ml + 'px';
-		range.style.marginRight = mr + 'px';
-		range.style.width = 'calc(100% - ' + (ml + mr) + 'px)';
-		if (maxW > 0) panel.style.minWidth = maxW + 44 + 'px';
-	}
 
-	if (range) {
-		range.addEventListener('input', () => {
+		function syncFooterTheme(theme) {
+			const el = document.getElementById('footer-theme');
+			if (el) el.textContent = theme === 'ancient' ? themeLabels.ancient : themeLabels.modern;
+		}
+
+		function applyEra() {
+			if (!range) return;
+			const v = hasPageTimeline && Number(range.value) === Number(range.max) ? 'full' : String(range.value);
+			const rootEl = document.documentElement;
+			rootEl.setAttribute('data-era', v);
+			const mark = marks.find((m) => String(m.dataset.era) === v);
+			const theme = mark && mark.dataset.theme ? mark.dataset.theme : null;
+			if (theme) {
+				rootEl.setAttribute('data-theme', theme);
+				syncFooterTheme(theme);
+			}
+		}
+
+		// 首尾刻度与滑块按钮对齐：整体平移（半宽 - 10px）
+		function fitPanelWidth() {
+			if (!panel || panel.hidden || !range) return;
+			let maxW = 0;
+			marks.forEach((m) => { maxW = Math.max(maxW, m.offsetWidth); });
+			const ml = Math.max(0, (marks[0] ? marks[0].offsetWidth : 0) / 2 - 10);
+			const mr = Math.max(0, (marks.length ? marks[marks.length - 1].offsetWidth : 0) / 2 - 10);
+			const marksEl = panel.querySelector('.tl-nav__marks');
+			if (marksEl) {
+				marksEl.style.marginLeft = ml + 'px';
+				marksEl.style.marginRight = mr + 'px';
+			}
+			range.style.marginLeft = ml + 'px';
+			range.style.marginRight = mr + 'px';
+			range.style.width = 'calc(100% - ' + (ml + mr) + 'px)';
+			// 移动端静态面板不设最小宽度，避免撑破窄屏
+			if (maxW > 0 && root.classList.contains('tl-nav--mobile')) {
+				panel.style.minWidth = '0';
+			} else if (maxW > 0) {
+				panel.style.minWidth = maxW + 44 + 'px';
+			}
+		}
+
+		if (range) {
+			range.addEventListener('input', () => {
+				syncScenes();
+				applyEra();
+			});
+		}
+
+		// 初始化：停在最后一个节点（“现在”）
+		if (range) {
 			syncScenes();
 			applyEra();
-		});
-	}
-
-	// 初始化：停在最后一个节点（“现在”）
-	if (range) {
-		syncScenes();
-		applyEra();
-	}
-	window.addEventListener('load', () => { if (panel && !panel.hidden) fitPanelWidth(); });
+		}
+		window.addEventListener('load', () => { if (panel && !panel.hidden) fitPanelWidth(); });
+	});
 </script>
 <style>
 	/* ===== 导航栏时间线：按钮 ===== */
@@ -361,5 +375,24 @@ const last = items.length - 1;
 		font-size: 15px;
 		font-weight: 800;
 		letter-spacing: 0.02em;
+	}
+
+	/* ===== 移动端（汉堡菜单内实例） ===== */
+	@media (max-width: 640px) {
+		.tl-nav--mobile {
+			display: block;
+		}
+
+		.tl-nav--mobile .tl-nav__toggle {
+			width: 100%;
+		}
+
+		/* 面板改为静态全宽，随菜单内容自然展开，避免 460px 固定宽度溢出 */
+		.tl-nav--mobile .tl-nav__panel {
+			position: static;
+			width: auto;
+			max-width: none;
+			margin-top: 8px;
+		}
 	}
 </style>

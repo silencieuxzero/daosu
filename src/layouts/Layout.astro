@@ -226,6 +226,11 @@ const eraDefaultTheme =
 						))
 					}
 				</nav>
+				{/* 移动端时间线入口（桌面端在 .nav 内） */}
+				<div class="mobile-menu__section">
+					<p class="mobile-menu__label">{t['nav.timeline']}</p>
+					<TimelineNav timeline={pageTimeline} locale={locale} variant="mobile" />
+				</div>
 				{
 					showLangSwitcher && (
 						<div class="mobile-menu__section">

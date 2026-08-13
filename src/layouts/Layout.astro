@@ -102,6 +102,15 @@ const textures = config.theme.enable_textures ? 'on' : 'off';
 				document.documentElement.setAttribute('data-theme', theme);
 			})();
 		</script>
+		<!-- 黑幕（.spoiler）：点击切换显示（移动端无 hover，点击保持显示） -->
+		<script is:inline>
+			(function () {
+				document.addEventListener('click', function (e) {
+					var el = e.target && e.target.closest ? e.target.closest('.spoiler') : null;
+					if (el) el.classList.toggle('revealed');
+				});
+			})();
+		</script>
 	</head>
 	<body>
 		<!-- ===== 顶栏 ===== -->

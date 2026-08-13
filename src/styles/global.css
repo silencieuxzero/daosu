@@ -555,3 +555,46 @@ main {
   display: none !important;
 }
 
+/* ============================================================
+   黑幕（spoiler）：%%文字%% / <span class="spoiler"> 渲染成黑块
+   默认遮盖，悬停/聚焦/按压/点击后显示文字
+   黑块底色按主题微调（现代近黑，古代深黛），文字固定浅色
+   ============================================================ */
+[data-theme='modern'] {
+  --spoiler-bg: #0a0a0a;
+}
+
+[data-theme='ancient'] {
+  --spoiler-bg: #131a26;
+}
+
+.spoiler {
+  color: transparent;
+  background-color: var(--spoiler-bg, #0a0a0a);
+  padding: 0 0.2em;
+  border-radius: 2px;
+  cursor: help;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: color 0.18s ease;
+}
+
+.spoiler:hover,
+.spoiler:focus,
+.spoiler:focus-visible,
+.spoiler:active,
+.spoiler.revealed {
+  color: #f0f0f0;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* 古代主题下黑幕保持深黛底，悬停/点击文字用更亮的米白 */
+[data-theme='ancient'] .spoiler:hover,
+[data-theme='ancient'] .spoiler:focus,
+[data-theme='ancient'] .spoiler:focus-visible,
+[data-theme='ancient'] .spoiler:active,
+[data-theme='ancient'] .spoiler.revealed {
+  color: #fff;
+}
+

@@ -1,19 +1,16 @@
 ---
-// 文章详情页（三语共用）
+// 文章详情页
 // 主题分套：同一 URL 下渲染现代/古代两套正文，切换主题即时显隐
 import { render } from 'astro:content';
-import { ui, defaultLang } from '../i18n/ui';
-import { formatDate, localizedPath, type Lang } from '../i18n/utils';
+import { formatDate } from '../lib/date';
 import { config } from '../lib/config';
 import TableOfContents from './TableOfContents.astro';
 import ReaderMode from './ReaderMode.astro';
 
-const { post, locale = defaultLang, ancient } = Astro.props as {
+const { post, ancient } = Astro.props as {
 	post: any;
-	locale?: Lang;
 	ancient?: any;
 };
-const t = ui[locale] ?? ui[defaultLang];
 const { Content } = await render(post);
 // 注意：模板中直接渲染的组件变量必须以大写开头，否则会被当作 HTML 元素
 const AncientContent = ancient ? (await render(ancient)).Content : null;
@@ -34,7 +31,7 @@ const githubHref = config.profile.github.startsWith('http')
 		<article class="prose">
 			<header class="post-head">
 				<span class="seal" aria-hidden="true">篇</span>
-				<p class="kicker">{formatDate(post.data.date, locale)}</p>
+				<p class="kicker">{formatDate(post.data.date)}</p>
 				<h1>{post.data.title}</h1>
 				{
 					post.data.description && (
@@ -59,7 +56,7 @@ const githubHref = config.profile.github.startsWith('http')
 			<article class="prose">
 				<header class="post-head">
 					<span class="seal" aria-hidden="true">篇</span>
-					<p class="kicker">{formatDate(ancient.data.date, locale)}</p>
+					<p class="kicker">{formatDate(ancient.data.date)}</p>
 					<h1>{ancient.data.title}</h1>
 					{
 						ancient.data.description && (
@@ -82,7 +79,7 @@ const githubHref = config.profile.github.startsWith('http')
 	<!-- ===== 作者信息栏 ===== -->
 	<aside class="author-box" aria-label="author">
 		<div class="author-box__info">
-			<p class="author-box__kicker">{t['post.author']}</p>
+			<p class="author-box__kicker">作者</p>
 			<p class="author-box__name">{authorName}</p>
 		</div>
 		<div class="author-box__links">
@@ -104,15 +101,15 @@ const githubHref = config.profile.github.startsWith('http')
 	</aside>
 
 	<nav class="back" aria-label="post navigation">
-		<a class="btn btn--outline" href={localizedPath('/', locale)}>
-			{t['post.back']}
+		<a class="btn btn--outline" href="/">
+			← 返回全部文章
 		</a>
 	</nav>
 </main>
 
 <!-- ===== 文章工具：目录 / 阅读模式 ===== -->
-<TableOfContents locale={locale} />
-<ReaderMode locale={locale} />
+<TableOfContents />
+<ReaderMode />
 
 <style>
 	/* ===== 阅读进度条 ===== */
@@ -286,7 +283,7 @@ const githubHref = config.profile.github.startsWith('http')
 	}
 </style>
 
-<script define:vars={{ pt: { expand: t['code.expand'], collapse: t['code.collapse'] } }}>
+<script define:vars={{ pt: { expand: '展开', collapse: '收起' } }}>
 	// ============================================================
 	// 阅读进度条：顶部 3px accent 条，随滚动填充
 	// ============================================================

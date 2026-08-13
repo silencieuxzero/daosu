@@ -2,9 +2,8 @@
 // 主题内容变体工具：同一实体在现代/古代主题下各有一套内容
 //
 // 命名约定（ancient/ 子目录配对）：
-//   xxx.md                  → 现代版（默认，theme = modern）
-//   ancient/xxx.md          → 古代版（theme = ancient）
-//   en/ancient/xxx.md       → 古代版（带语言前缀时同理）
+//   xxx.md        → 现代版（默认，theme = modern）
+//   ancient/xxx.md → 古代版（theme = ancient）
 //
 // 配对键 = 去掉 ancient/ 段后的 id。
 // 只有现代版时，两个主题自动回退共用现代版（ancient 缺省）。
@@ -24,7 +23,7 @@ export function themeOf(id: string): ContentTheme {
 		: 'modern';
 }
 
-/** 配对键：去掉 ancient/ 段（语言目录前缀保留，如 en/xxx） */
+/** 配对键：去掉 ancient/ 段 */
 export function pairKeyOf(id: string): string {
 	return id
 		.replace(new RegExp(`/${ANCIENT_SEGMENT}/`), '/')

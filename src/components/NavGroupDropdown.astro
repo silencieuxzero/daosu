@@ -4,11 +4,8 @@
 // 由 config.mjs [nav.groups] 驱动；点击展开、外部点击/Escape 关闭
 // 移动端由 Layout 平铺渲染（本组件 <640px 隐藏）
 // ============================================================
-import { localizedPath, defaultLang, type Lang } from '../i18n/utils';
-
-const { group, locale = defaultLang } = Astro.props as {
+const { group } = Astro.props as {
 	group: { label: string; items: { label: string; href: string }[] };
-	locale?: Lang;
 };
 ---
 
@@ -27,7 +24,7 @@ const { group, locale = defaultLang } = Astro.props as {
 		{
 			group.items.map((item) => (
 				<li>
-					<a class="nav-group__item" href={localizedPath(item.href, locale)}>
+					<a class="nav-group__item" href={item.href}>
 						{item.label}
 					</a>
 				</li>

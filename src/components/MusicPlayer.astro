@@ -5,14 +5,9 @@
 //       循环模式（不循环/单曲/列表）、音量、状态提示、标题跑马灯
 // 数据源：构建时扫描 public/music/（静态复制到 /music/）
 // ============================================================
-import { ui, defaultLang } from '../i18n/ui';
-import type { Lang } from '../i18n/utils';
 import { config } from '../lib/config';
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
-
-const { locale = defaultLang } = Astro.props as { locale?: Lang };
-const t = ui[locale] ?? ui[defaultLang];
 
 // 曲目清单：构建时扫描 public/music/
 const MUSIC_RE = /\.(mp3|wav|ogg|flac|m4a|aac|opus|webm)$/i;
@@ -83,23 +78,23 @@ const musicList = [...localTracks, ...(await resolveExternal(config.music.songs)
 
 // 播放器文案子集（define:vars 注入客户端）
 const pt = {
-	title: t['player.title'],
-	list: t['player.list'],
-	empty: t['player.empty'],
-	play: t['player.play'],
-	pause: t['player.pause'],
-	loopNone: t['player.loopNone'],
-	loopOne: t['player.loopOne'],
-	loopAll: t['player.loopAll'],
-	loopMode: t['player.loopMode'],
-	volume: t['player.volume'],
-	loading: t['player.loading'],
-	errPlay: t['player.errPlay'],
-	errTimeout: t['player.errTimeout'],
-	errNetwork: t['player.errNetwork'],
-	errDecode: t['player.errDecode'],
-	errUnavailable: t['player.errUnavailable'],
-	ended: t['player.ended'],
+	title: '音乐播放',
+	list: '播放列表',
+	empty: '暂无音乐',
+	play: '播放',
+	pause: '暂停',
+	loopNone: '不循环',
+	loopOne: '单曲循环',
+	loopAll: '列表循环',
+	loopMode: '循环模式：',
+	volume: '音量',
+	loading: '加载中…',
+	errPlay: '播放失败，请检查音乐链接',
+	errTimeout: '加载超时，请检查网络或链接',
+	errNetwork: '网络错误，无法获取音乐',
+	errDecode: '解码失败，不支持的音频格式',
+	errUnavailable: '音乐链接不可用或不支持的格式',
+	ended: '播放完毕',
 };
 ---
 

@@ -4,29 +4,24 @@
 // 左下角按钮展开面板；从 .prose 提取 h2-h4；
 // IntersectionObserver 高亮当前章节；点击平滑滚动
 // ============================================================
-import { ui, defaultLang } from '../i18n/ui';
-import type { Lang } from '../i18n/utils';
-
-const { locale = defaultLang } = Astro.props as { locale?: Lang };
-const t = ui[locale] ?? ui[defaultLang];
 ---
 
 <div class="toc" id="toc" hidden>
-	<button class="toc__btn" id="toc-btn" type="button" aria-label={t['toc.open']} aria-expanded="false">
+	<button class="toc__btn" id="toc-btn" type="button" aria-label="打开目录" aria-expanded="false">
 		<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
 			<path d="M3 6h18M3 12h18M3 18h10" />
 		</svg>
 	</button>
 
 	<div class="toc__panel" id="toc-panel">
-		<button class="toc__close" id="toc-close" type="button" aria-label={t['toc.close']}>
+		<button class="toc__close" id="toc-close" type="button" aria-label="收起目录">
 			<svg viewBox="0 0 16 16" width="10" height="10" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg>
 		</button>
 		<div class="toc__head">
 			<span class="toc__dot" aria-hidden="true"></span>
-			<span class="toc__label">{t['toc.title']}</span>
+			<span class="toc__label">目录</span>
 		</div>
-		<nav class="toc__nav" aria-label={t['toc.title']}>
+		<nav class="toc__nav" aria-label="目录">
 			<ul class="toc__list" id="toc-list"></ul>
 		</nav>
 	</div>
@@ -213,7 +208,7 @@ const t = ui[locale] ?? ui[defaultLang];
 	}
 </style>
 
-<script define:vars={{ pt: { open: t['toc.open'], close: t['toc.close'], title: t['toc.title'] } }}>
+<script define:vars={{ pt: { open: '打开目录', close: '收起目录', title: '目录' } }}>
 	// ============================================================
 	// 目录逻辑：从当前可见的 .prose 提取 h2-h4，IO 高亮当前章节
 	// 主题分套：页面可能含两套正文（data-split），只索引当前主题那套；

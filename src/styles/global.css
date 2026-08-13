@@ -420,7 +420,6 @@ img {
 
 /* 统一按压反馈：平面按钮"按下去"的位移 */
 .btn:active,
-.lang-toggle:active,
 .social-toggle:active,
 .menu-toggle:active,
 .music__btn:active,

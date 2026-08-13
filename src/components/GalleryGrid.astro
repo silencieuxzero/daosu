@@ -1,31 +1,27 @@
 ---
 // ============================================================
-// 画廊/多媒体网格（三语共用）：卡片网格 + 轻量 lightbox · 平面主义风格
+// 画廊/多媒体网格：卡片网格 + 轻量 lightbox · 平面主义风格
 // 图片列表来自 config.mjs [gallery.modern|ancient]，可用 images prop 覆盖
-// head 可选：覆盖头部文案（kicker/title/desc），缺省用 i18n 字典
+// head 可选：覆盖头部文案（kicker/title/desc），缺省用内置文案
 // 主题分套：split='modern'|'ancient' 时整体包 data-split 容器，id 加前缀
 // bare：不渲染 <main>/头部/回纹条带（第二套内容用，避免重复头部）
 // ============================================================
-import { ui, defaultLang } from '../i18n/ui';
-import type { Lang } from '../i18n/utils';
 import { config } from '../lib/config';
 
-const { locale = defaultLang, head, images, split, showHead = true, bare = false } =
-	Astro.props as {
-		locale?: Lang;
-		head?: { kicker?: string; title?: string; desc?: string };
-		images?: { src: string; alt?: string }[];
-		split?: 'modern' | 'ancient';
-		showHead?: boolean;
-		bare?: boolean;
-	};
-const t = ui[locale] ?? ui[defaultLang];
+const { head, images, split, showHead = true, bare = false } = Astro.props as {
+	head?: { kicker?: string; title?: string; desc?: string };
+	images?: { src: string; alt?: string }[];
+	split?: 'modern' | 'ancient';
+	showHead?: boolean;
+	bare?: boolean;
+};
 
 const imageList = images ?? (split === 'ancient' ? config.gallery.ancient : config.gallery.modern);
 const pfx = split ? split + '-' : '';
-const headKicker = head?.kicker ?? t['gallery.kicker'];
-const headTitle = head?.title ?? t['gallery.title'];
-const headDesc = head?.desc ?? t['gallery.desc'];
+const headKicker = head?.kicker ?? '画廊 · 2026';
+const headTitle = head?.title ?? '画廊';
+const headDesc = head?.desc ?? '一些几何与纹样的记录。点击查看大图。';
+const headCount = `共 ${imageList.length} 幅`;
 ---
 
 {bare ? (
@@ -53,13 +49,13 @@ const headDesc = head?.desc ?? t['gallery.desc'];
 
 		<!-- ===== Lightbox（带主题前缀 id，避免与第一套冲突） ===== -->
 		<div class="lightbox" id={`lightbox-${pfx}`} hidden role="dialog" aria-modal="true" aria-label={headTitle}>
-			<button class="lightbox__close" id={`lightbox-close-${pfx}`} type="button" aria-label={t['gallery.close']}>×</button>
-			<button class="lightbox__nav lightbox__nav--prev" id={`lightbox-prev-${pfx}`} type="button" aria-label={t['gallery.prev']}>←</button>
+		<button class="lightbox__close" id={`lightbox-close-${pfx}`} type="button" aria-label="关闭预览">×</button>
+			<button class="lightbox__nav lightbox__nav--prev" id={`lightbox-prev-${pfx}`} type="button" aria-label="上一张">←</button>
 			<figure class="lightbox__figure">
 				<img id={`lightbox-img-${pfx}`} src="" alt="" />
 				<figcaption id={`lightbox-alt-${pfx}`} class="lightbox__alt"></figcaption>
 			</figure>
-			<button class="lightbox__nav lightbox__nav--next" id={`lightbox-next-${pfx}`} type="button" aria-label={t['gallery.next']}>→</button>
+			<button class="lightbox__nav lightbox__nav--next" id={`lightbox-next-${pfx}`} type="button" aria-label="下一张">→</button>
 		</div>
 	</div>
 ) : (
@@ -70,7 +66,7 @@ const headDesc = head?.desc ?? t['gallery.desc'];
 				<p class="kicker">{headKicker}</p>
 				<h1 class="gallery-head__title">{headTitle}</h1>
 				<p class="gallery-head__desc">{headDesc}</p>
-				<p class="gallery-head__meta">{t['gallery.count'].replace('{n}', String(imageList.length))}</p>
+				<p class="gallery-head__meta">{headCount}</p>
 			</header>
 		)}
 
@@ -103,13 +99,13 @@ const headDesc = head?.desc ?? t['gallery.desc'];
 
 			<!-- ===== Lightbox（带主题前缀 id，避免与另一套冲突） ===== -->
 			<div class="lightbox" id={`lightbox-${pfx}`} hidden role="dialog" aria-modal="true" aria-label={headTitle}>
-				<button class="lightbox__close" id={`lightbox-close-${pfx}`} type="button" aria-label={t['gallery.close']}>×</button>
-				<button class="lightbox__nav lightbox__nav--prev" id={`lightbox-prev-${pfx}`} type="button" aria-label={t['gallery.prev']}>←</button>
+				<button class="lightbox__close" id={`lightbox-close-${pfx}`} type="button" aria-label="关闭预览">×</button>
+				<button class="lightbox__nav lightbox__nav--prev" id={`lightbox-prev-${pfx}`} type="button" aria-label="上一张">←</button>
 				<figure class="lightbox__figure">
 					<img id={`lightbox-img-${pfx}`} src="" alt="" />
 					<figcaption id={`lightbox-alt-${pfx}`} class="lightbox__alt"></figcaption>
 				</figure>
-				<button class="lightbox__nav lightbox__nav--next" id={`lightbox-next-${pfx}`} type="button" aria-label={t['gallery.next']}>→</button>
+				<button class="lightbox__nav lightbox__nav--next" id={`lightbox-next-${pfx}`} type="button" aria-label="下一张">→</button>
 			</div>
 		</div>
 	</main>

@@ -2,7 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import { config } from '../lib/config';
 import { getCollection } from 'astro:content';
-import { formatDate, defaultLang } from '../i18n/utils';
+import { formatDate } from '../lib/date';
 
 // 茶馆故事索引：来自 src/content/stories/*.md（+ .ancient 古代版），按 order 排序
 // 主题分套：现代/古代各一套列表，切换主题即时显隐
@@ -11,7 +11,7 @@ import { pairEntries, entryFor, pairKeyOf, isDefined } from '../lib/variants';
 const stories = pairEntries(await getCollection('stories'));
 const hasAncient = stories.some((s) => s.ancient);
 
-const fmt = (d?: Date) => (d ? formatDate(d, defaultLang) : '');
+const fmt = (d?: Date) => (d ? formatDate(d) : '');
 
 // 两套列表（古代缺省回退现代版）
 const modernList = stories.map((p) => entryFor(p, 'modern')).filter(isDefined);

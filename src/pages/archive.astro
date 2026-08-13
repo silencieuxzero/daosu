@@ -1,10 +1,10 @@
 ---
-// 归档页（中文）
+// 归档页
 import Layout from '../layouts/Layout.astro';
 import { config } from '../lib/config';
 import ArchiveGrid from '../components/ArchiveGrid.astro';
 ---
 
-<Layout title=`归档 · ${config.site.name}`>
-	<ArchiveGrid locale="zh" />
+<Layout title={`归档 · ${config.site.name}`}>
+	<ArchiveGrid />
 </Layout>

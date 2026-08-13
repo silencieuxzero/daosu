@@ -7,31 +7,26 @@
 // 站点名（顶栏品牌、Footer 版权行、标签页标题）
 export const site = {
 	name: '悼溯',
-	// 首页大标题（站点内容：固定中文，不随语言切换）
-	title: { zh: '悼溯茶馆' },
-	// 首页副标题（站点内容：固定中文，不随语言切换）
-	tagline: { zh: '世界深处的一处茶馆。' },
+	// 首页大标题（站点头部显示）
+	title: '悼溯茶馆',
+	// 首页副标题（站点头部显示）
+	tagline: '世界深处的一处茶馆。',
 };
 
 // ---------- 导航 ----------
-// 顶栏导航链接。两种标签方式：
-//   key   —— i18n 字典键（三语标签自动适配，如 "nav.home"）
-//   label —— 直接写死的标签（可选，优先于 key）
-// href 为站内路径（自动加当前语言前缀），也可以放外部链接（https://...）
+// 顶栏导航链接：label 为显示文字，href 为站内路径或外部链接（https://...）
 export const nav = {
 	items: [
-		{ key: 'nav.home', href: '/' },
-		{ key: 'nav.archive', href: '/archive' },
-		{ key: 'nav.about', href: '/about' },
+		{ label: '首页', href: '/' },
+		{ label: '归档', href: '/archive' },
+		{ label: '关于', href: '/about' },
 	],
 	// 顶栏下拉组：
-	//   label  —— 按钮显示文字
-	//   locales —— 限定显示的语言（缺省 = 全部语言显示）
-	//   items  —— 下拉链接（label 直接显示，href 站内路径自动加语言前缀）
+	//   label —— 按钮显示文字
+	//   items —— 下拉链接（label 直接显示，href 站内路径或外部链接）
 	groups: [
 		{
 			label: '茶馆',
-			locales: ['zh'],
 			items: [
 				{ label: '茶客设定', href: '/guests' },
 				{ label: '茶馆故事', href: '/stories' },
@@ -152,12 +147,10 @@ export const decor = {
 };
 
 // ---------- 前言（首页介绍语板块） ----------
-// 标题与正文：三语可选（缺省语言回退内置翻译字典）；
-// 修改后重新构建生效。
+// 标题与正文；修改后重新构建生效。
 export const preface = {
-	title: { zh: '序', en: 'Preface', it: 'Prefazione' },
-	text: {
-		zh: `茶馆······茶馆？
+	title: '序',
+	text: `茶馆······茶馆？
 
 外观是坐落于街角的名为“悼湖茶馆”的古风茶馆，内部装饰很朴素，木桌椅被打理得很干净。摇椅静静的待在窗边的位置，柜子上摆放着各种茶罐与茶包等。桌上放着白瓷茶具。
 
@@ -166,16 +159,6 @@ export const preface = {
 后院环境优美，各种花卉与植物攀附在墙园上，被打理干净的鱼缸被放在离前门最近的地方，一旁的水车源源不断的流淌着水流，下方是某位茶客所饲养的各种观赏鱼……石桌椅安静的待在水池旁；后院的老槐树上总是会有小动物待着，木柴被堆放在角落。
 
 茶馆有时安静，有时热闹。但琈予总是在那。`,
-		en: 'This teahouse hides deep in the world. Between flat design and Pre-Qin ornament, between modern and ancient, lie some words, notes and records. The tea is ready — come in and sit down.',
-		it: "Questa casa da tè si nasconde nel profondo del mondo. Tra design piatto e ornamenti pre-Qin, tra moderno e antico, giacciono parole, appunti e racconti. Il tè è pronto: entra e siediti.",
-	},
-};
-
-// ---------- 国际化 ----------
-// 默认语言与语言列表由 astro.config.mjs 读取（构建期配置）
-export const i18n = {
-	default_locale: 'zh',
-	locales: ['zh', 'en', 'it'],
 };
 
 // 聚合导出（供 src/lib/config.ts 读取）

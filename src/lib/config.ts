@@ -8,8 +8,8 @@ const raw: any = rawModule;
 export interface SiteConfig {
 	site: {
 		name: string;
-		title: Record<string, string>;
-		tagline: Record<string, string>;
+		title: string;
+		tagline: string;
 	};
 	profile: {
 		author: string;
@@ -17,10 +17,9 @@ export interface SiteConfig {
 		github: string;
 	};
 	nav: {
-		items: { key?: string; label?: string; href: string }[];
+		items: { label: string; href: string }[];
 		groups: {
 			label: string;
-			locales?: string[];
 			items: { label: string; href: string }[];
 		}[];
 	};
@@ -44,16 +43,16 @@ export interface SiteConfig {
 		home: string;
 	};
 	preface: {
-		title: Record<string, string>;
-		text: Record<string, string>;
+		title: string;
+		text: string;
 	};
 }
 
 export const config: SiteConfig = {
 	site: {
 		name: raw.site?.name ?? 'DAOSU',
-		title: raw.site?.title ?? {},
-		tagline: raw.site?.tagline ?? {},
+		title: typeof raw.site?.title === 'string' ? raw.site.title : '悼溯茶馆',
+		tagline: typeof raw.site?.tagline === 'string' ? raw.site.tagline : '世界深处的一处茶馆。',
 	},
 	profile: {
 		author: raw.profile?.author ?? 'DAOSU',
@@ -70,16 +69,13 @@ export const config: SiteConfig = {
 		items: Array.isArray(raw.nav?.items)
 			? raw.nav.items
 					.filter((i: any) => i && typeof i.href === 'string')
-					.map((i: any) => ({ key: i.key, label: i.label, href: i.href }))
+					.map((i: any) => ({ label: typeof i.label === 'string' ? i.label : i.href, href: i.href }))
 			: [],
 		groups: Array.isArray(raw.nav?.groups)
 			? raw.nav.groups
 					.filter((g: any) => g && typeof g.label === 'string' && Array.isArray(g.items))
 					.map((g: any) => ({
 						label: g.label,
-						locales: Array.isArray(g.locales)
-							? g.locales.filter((x: any) => typeof x === 'string')
-							: undefined,
 						items: g.items
 							.filter((i: any) => i && typeof i.label === 'string' && typeof i.href === 'string')
 							.map((i: any) => ({ label: i.label, href: i.href })),
@@ -129,18 +125,7 @@ export const config: SiteConfig = {
 		home: typeof raw.decor?.home === 'string' ? raw.decor.home : 'swiss',
 	},
 	preface: {
-		title:
-			raw.preface?.title && typeof raw.preface.title === 'object'
-				? raw.preface.title
-				: {},
-		text:
-			raw.preface?.text && typeof raw.preface.text === 'object'
-				? raw.preface.text
-				: {},
+		title: typeof raw.preface?.title === 'string' ? raw.preface.title : '序',
+		text: typeof raw.preface?.text === 'string' ? raw.preface.text : '',
 	},
 };
-
-/** 按语言取站点标题/副标题（缺省回退空串，由调用方回退翻译字典） */
-export function siteText(locale: string, key: 'title' | 'tagline'): string {
-	return config.site[key][locale] ?? '';
-}

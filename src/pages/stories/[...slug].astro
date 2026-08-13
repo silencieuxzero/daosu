@@ -4,7 +4,7 @@
 import Layout from '../../layouts/Layout.astro';
 import { config } from '../../lib/config';
 import { getCollection, render } from 'astro:content';
-import { formatDate, defaultLang } from '../../i18n/utils';
+import { formatDate } from '../../lib/date';
 import { pairEntries, entryFor, pairKeyOf } from '../../lib/variants';
 import { getEntry } from 'astro:content';
 
@@ -36,7 +36,7 @@ const prev = idx > 0 ? all[idx - 1] : null;
 const next = idx >= 0 && idx < all.length - 1 ? all[idx + 1] : null;
 const navName = (p: any) => p.modern?.data.title ?? p.ancient?.data.title ?? '';
 
-const fmt = (d?: Date) => (d ? formatDate(d, defaultLang) : '');
+const fmt = (d?: Date) => (d ? formatDate(d) : '');
 
 // 时间线 era 分块：正文从 src/content/timelines/stories/<slug>/<era>.md 加载
 const storySlug = modernStory ? pairKeyOf(modernStory.id) : '';

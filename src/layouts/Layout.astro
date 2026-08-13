@@ -6,33 +6,19 @@ import SocialIcon from '../components/SocialIcon.astro';
 import NavGroupDropdown from '../components/NavGroupDropdown.astro';
 import TimelineNav from '../components/TimelineNav.astro';
 import { getCollection } from 'astro:content';
-import { localizedPath, languages, type Lang } from '../i18n/utils';
-import { ui, defaultLang } from '../i18n/ui';
 import { config } from '../lib/config';
 import { pairKeyOf } from '../lib/variants';
 
-const {
-	title = `${config.site.name} · ${ui[defaultLang]['footer.type']}`,
-	nav,
-	showLangSwitcher = true,
-	availableLangs,
-} = Astro.props as {
+const { title = `${config.site.name} · 个人博客`, nav } = Astro.props as {
 	title?: string;
 	nav?: { label: string; href: string }[];
-	showLangSwitcher?: boolean;
-	// 限定语言切换器可用的语言（文章页传：该文章存在的语言版本），缺省为全部
-	availableLangs?: Lang[];
 };
 
-// 当前语言（默认 zh）
-const locale: Lang = (Astro.currentLocale as Lang) ?? defaultLang;
-const t = ui[locale] ?? ui[defaultLang];
-
-// 默认导航（本地化）——仅当 config.mjs 未配置 [nav] 时使用
+// 默认导航——仅当 config.mjs 未配置 [nav] 时使用
 const defaultNav = [
-	{ label: t['nav.home'], href: localizedPath('/', locale) },
-	{ label: t['nav.archive'], href: localizedPath('/archive', locale) },
-	{ label: t['nav.about'], href: localizedPath('/about', locale) },
+	{ label: '首页', href: '/' },
+	{ label: '归档', href: '/archive' },
+	{ label: '关于', href: '/about' },
 ];
 
 // 当前路径（导航高亮用，忽略尾斜杠差异）
@@ -41,36 +27,10 @@ const normalize = (p: string) => p.replace(/\/+$/, '') || '/';
 const isNavActive = (href: string) =>
 	!href.startsWith('http') && normalize(href) === normalize(currentPath);
 
-// 当前语言可见的下拉组（config.mjs [nav.groups]：locales 限定或缺省全部）
-const visibleGroups = config.nav.groups.filter(
-	(g) => !g.locales || g.locales.includes(locale)
-);
-
 // 导航项优先级：页面显式 nav prop > config.mjs [nav] > 内置默认导航
-// config 导航的站内 href 自动加语言前缀，外部链接/锚点原样使用
 const navItems =
 	nav ??
-	(config.nav.items.length > 0
-		? config.nav.items.map((item) => ({
-				label:
-					item.label ||
-					((t as Record<string, string>)[item.key ?? ''] ?? item.href),
-				href:
-					item.href.startsWith('/') && !item.href.startsWith('//')
-						? localizedPath(item.href, locale)
-						: item.href,
-		  }))
-		: defaultNav);
-
-// 语言切换链接：同路径换语言前缀；availableLangs 限定可用语言（避免指向不存在的页面）
-const langLinks = (Object.keys(languages) as Lang[])
-	.filter((l) => !availableLangs || availableLangs.includes(l))
-	.map((l) => ({
-		lang: l,
-		label: languages[l],
-		href: localizedPath(currentPath, l),
-		active: l === locale,
-	}));
+	(config.nav.items.length > 0 ? config.nav.items : defaultNav);
 
 // 主题配置（来自 config.mjs）
 // 注意：不能直接注入 --accent（会污染古代主题的强调色），
@@ -87,12 +47,10 @@ for (const entry of await getCollection('stories')) {
 	if (entry.data.timeline?.length) timelineIndex.set(`stories/${pairKeyOf(entry.id)}`, entry.data.timeline);
 }
 
-// 当前页面匹配（剥离语言前缀）：/guests/xxx/ → guests/xxx；未匹配 → null（默认两节点）
-const LANGS = Object.keys(languages);
+// 当前页面匹配：/guests/xxx/ → guests/xxx；未匹配 → null（默认两节点）
 const pathSegs = Astro.url.pathname.split('/').filter(Boolean);
-const segs = LANGS.includes(pathSegs[0] ?? '') ? pathSegs.slice(1) : pathSegs;
 const pageTimeline: any[] | null =
-	segs.length >= 2 ? (timelineIndex.get(`${segs[0]}/${segs[1]}`) ?? null) : null;
+	pathSegs.length >= 2 ? (timelineIndex.get(`${pathSegs[0]}/${pathSegs[1]}`) ?? null) : null;
 
 // 默认主题：当前页面时间线“现在”档的 theme，否则 config 默认
 const eraDefaultTheme =
@@ -103,7 +61,7 @@ const eraDefaultTheme =
 
 <!doctype html>
 <html
-	lang={locale === 'zh' ? 'zh-CN' : locale}
+	lang="zh-CN"
 	data-theme="modern"
 	data-textures={textures}
 	data-default-theme={eraDefaultTheme}
@@ -138,9 +96,9 @@ const eraDefaultTheme =
 	<body>
 		<!-- ===== 顶栏 ===== -->
 		<header class="topbar">
-			<a class="brand" href={localizedPath('/', locale)}>{config.site.name}</a>
+			<a class="brand" href="/">{config.site.name}</a>
 			<div class="topbar__right">
-				<nav class="nav" aria-label={t['nav.nav']}>
+				<nav class="nav" aria-label="站点导航">
 					{
 						navItems.map((item) => (
 							<a
@@ -153,54 +111,19 @@ const eraDefaultTheme =
 						))
 					}
 					{
-						visibleGroups.map((group) => (
-							<NavGroupDropdown group={group} locale={locale} />
+						config.nav.groups.map((group) => (
+							<NavGroupDropdown group={group} />
 						))
 					}
-					<TimelineNav timeline={pageTimeline} locale={locale} />
+					<TimelineNav timeline={pageTimeline} />
 				</nav>
-				<SocialDropdown class="topbar__dropdown" links={config.social.links} locale={locale} />
-				{
-					showLangSwitcher && (
-						<div class="lang-wrap">
-							<button
-								id="lang-toggle"
-								class="lang-toggle"
-								type="button"
-								aria-haspopup="true"
-								aria-expanded="false"
-							>
-								<span id="lang-current">{languages[locale]}</span>
-								<span class="lang-toggle__caret" aria-hidden="true">▾</span>
-							</button>
-							<ul id="lang-menu" class="lang-menu" hidden>
-								{
-									langLinks.map((l) => (
-										<li>
-											<a
-												class:list={[
-													'lang-menu__item',
-													{ 'lang-menu__item--active': l.active },
-												]}
-												href={l.href}
-												lang={l.lang}
-												aria-current={l.active ? 'true' : undefined}
-											>
-												{l.label}
-											</a>
-										</li>
-									))
-								}
-							</ul>
-						</div>
-					)
-				}
+				<SocialDropdown class="topbar__dropdown" links={config.social.links} />
 				<button
 					id="menu-toggle"
 					class="menu-toggle"
 					type="button"
 					aria-expanded="false"
-					aria-label={t['nav.menu']}
+					aria-label="菜单"
 				>
 					<span class="menu-toggle__bar" aria-hidden="true"></span>
 					<span class="menu-toggle__bar" aria-hidden="true"></span>
@@ -210,7 +133,7 @@ const eraDefaultTheme =
 
 			<!-- 移动端菜单面板（<640px 显示） -->
 			<div id="mobile-menu" class="mobile-menu" hidden>
-				<nav class="mobile-menu__nav" aria-label={t['nav.nav']}>
+				<nav class="mobile-menu__nav" aria-label="站点导航">
 					{
 						navItems.map((item) => (
 							<a
@@ -228,40 +151,17 @@ const eraDefaultTheme =
 				</nav>
 				{/* 移动端时间线入口（桌面端在 .nav 内） */}
 				<div class="mobile-menu__section">
-					<p class="mobile-menu__label">{t['nav.timeline']}</p>
-					<TimelineNav timeline={pageTimeline} locale={locale} variant="mobile" />
+					<p class="mobile-menu__label">时间线</p>
+					<TimelineNav timeline={pageTimeline} variant="mobile" />
 				</div>
 				{
-					showLangSwitcher && (
-						<div class="mobile-menu__section">
-							<p class="mobile-menu__label">{t['nav.language'] ?? ''}</p>
-							<div class="mobile-menu__langs">
-								{
-									langLinks.map((l) => (
-										<a
-											class:list={[
-												'mobile-menu__lang',
-												{ 'mobile-menu__lang--active': l.active },
-											]}
-											href={l.href}
-											lang={l.lang}
-										>
-											{l.label}
-										</a>
-									))
-								}
-							</div>
-						</div>
-					)
-				}
-				{
-					visibleGroups.map((group) => (
+					config.nav.groups.map((group) => (
 						<div class="mobile-menu__section">
 							<p class="mobile-menu__label">{group.label}</p>
 							<div class="mobile-menu__langs">
 								{
 									group.items.map((item) => (
-										<a class="mobile-menu__lang" href={localizedPath(item.href, locale)}>
+										<a class="mobile-menu__lang" href={item.href}>
 											{item.label}
 										</a>
 									))
@@ -273,7 +173,7 @@ const eraDefaultTheme =
 				{
 					config.social.links.length > 0 && (
 						<div class="mobile-menu__section">
-							<p class="mobile-menu__label">{t['nav.social']}</p>
+							<p class="mobile-menu__label">社交</p>
 							<div class="mobile-menu__langs">
 								{
 									config.social.links.map((l) => (
@@ -300,9 +200,9 @@ const eraDefaultTheme =
 		<!-- ===== Footer ===== -->
 		<footer class="footer">
 			<div class="footer__row">
-				<p>© {new Date().getFullYear()} {config.site.name} · {t['footer.type']}</p>
+				<p>© {new Date().getFullYear()} {config.site.name} · 个人博客</p>
 				<p class="footer__mono">
-					{t['footer.tagline']} · <span id="footer-theme">{t['theme.modern']}</span>
+					纯 CSS 变量 · 零依赖 · <span id="footer-theme">现代</span>
 				</p>
 			</div>
 		</footer>
@@ -320,7 +220,7 @@ const eraDefaultTheme =
 		</button>
 
 		<!-- ===== 全局音乐播放器 ===== -->
-		<MusicToggle locale={locale} />
+		<MusicToggle />
 	</body>
 </html>
 
@@ -395,90 +295,6 @@ const eraDefaultTheme =
 		display: flex;
 		align-items: center;
 		gap: clamp(12px, 2vw, 24px);
-	}
-
-	/* ===== 语言下拉 ===== */
-	.lang-wrap {
-		position: relative;
-	}
-
-	.lang-toggle {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 9px 12px;
-		background: var(--bg);
-		color: var(--fg);
-		border: var(--line) solid var(--border);
-		border-radius: 0;
-		font: 700 12px/1 var(--font-mono);
-		letter-spacing: 0.12em;
-		cursor: pointer;
-		transition: background-color 0.15s ease, color 0.15s ease;
-	}
-
-	.lang-toggle:hover {
-		background: var(--fg);
-		color: var(--bg);
-	}
-
-	.lang-toggle[aria-expanded='true'] {
-		background: var(--accent);
-		color: var(--bg);
-		border-color: var(--accent);
-	}
-
-	.lang-toggle__caret {
-		font-size: 10px;
-		line-height: 1;
-		transition: transform 0.15s ease;
-	}
-
-	.lang-toggle[aria-expanded='true'] .lang-toggle__caret {
-		transform: rotate(180deg);
-	}
-
-	.lang-menu {
-		position: absolute;
-		top: calc(100% + 6px);
-		right: 0;
-		min-width: 140px;
-		margin: 0;
-		padding: 0;
-		list-style: none;
-		background: var(--bg);
-		border: var(--line) solid var(--border);
-		z-index: 80;
-	}
-
-	.lang-menu[hidden] {
-		display: none;
-	}
-
-	.lang-menu__item {
-		display: block;
-		padding: 12px 16px;
-		font-family: var(--font-mono);
-		font-size: 12px;
-		letter-spacing: 0.12em;
-		text-decoration: none;
-		color: var(--fg);
-		transition: background-color 0.15s ease, color 0.15s ease;
-	}
-
-	.lang-menu__item + .lang-menu__item {
-		border-top: 1px solid var(--grid-line);
-	}
-
-	.lang-menu__item:hover {
-		background: var(--fg);
-		color: var(--bg);
-	}
-
-	.lang-menu__item--active {
-		background: var(--accent);
-		color: var(--bg);
-		pointer-events: none;
 	}
 
 	/* ===== Footer ===== */
@@ -636,9 +452,8 @@ const eraDefaultTheme =
 			display: none;
 		}
 
-		/* 语言/社交下拉移入汉堡面板，顶栏隐藏 */
-		.topbar__dropdown,
-		.lang-wrap {
+		/* 社交下拉移入汉堡面板，顶栏隐藏 */
+		.topbar__dropdown {
 			display: none;
 		}
 
@@ -653,43 +468,6 @@ const eraDefaultTheme =
 </style>
 
 <script>
-	// 语言下拉菜单：点击切换、外部点击关闭、Escape 关闭
-	const langToggle = document.getElementById('lang-toggle');
-	const langMenu = document.getElementById('lang-menu');
-
-	if (langToggle && langMenu) {
-		langToggle.addEventListener('click', (e) => {
-			e.stopPropagation();
-			langMenu.hidden = !langMenu.hidden;
-			// aria-expanded 反映切换后的展开状态（收起时 false，展开时 true）
-			langToggle.setAttribute('aria-expanded', String(!langMenu.hidden));
-		});
-
-		// 捕获阶段监听：点击页面任意处（含社交/主题按钮）都先关闭本菜单
-		document.addEventListener(
-			'click',
-			(e) => {
-				if (
-					!langMenu.hidden &&
-					(!(e.target instanceof Node) || !langMenu.contains(e.target)) &&
-					e.target !== langToggle
-				) {
-					langMenu.hidden = true;
-					langToggle.setAttribute('aria-expanded', 'false');
-				}
-			},
-			true
-		);
-
-		document.addEventListener('keydown', (e) => {
-			if (e.key === 'Escape' && !langMenu.hidden) {
-				langMenu.hidden = true;
-				langToggle.setAttribute('aria-expanded', 'false');
-				langToggle.focus();
-			}
-		});
-	}
-
 	// 移动端汉堡菜单
 	const menuToggle = document.getElementById('menu-toggle');
 	const mobileMenu = document.getElementById('mobile-menu');

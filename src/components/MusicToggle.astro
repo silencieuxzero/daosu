@@ -4,11 +4,6 @@
 // 右下角方形按钮，点击展开播放器卡片；点击外部/关闭按钮收起
 // ============================================================
 import MusicPlayer from './MusicPlayer.astro';
-import { ui, defaultLang } from '../i18n/ui';
-import type { Lang } from '../i18n/utils';
-
-const { locale = defaultLang } = Astro.props as { locale?: Lang };
-const t = ui[locale] ?? ui[defaultLang];
 ---
 
 <div class="music-toggle" id="music-toggle">
@@ -16,7 +11,7 @@ const t = ui[locale] ?? ui[defaultLang];
 		class="music-toggle__btn"
 		id="music-toggle-btn"
 		type="button"
-		aria-label={t['player.open']}
+		aria-label="打开音乐播放器"
 		aria-expanded="false"
 	>
 		<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
@@ -27,10 +22,10 @@ const t = ui[locale] ?? ui[defaultLang];
 	</button>
 
 	<div class="music-toggle__panel" id="music-toggle-panel">
-		<button class="music-toggle__close" id="music-close-btn" type="button" aria-label={t['player.close']}>
+		<button class="music-toggle__close" id="music-close-btn" type="button" aria-label="收起音乐播放器">
 			<svg viewBox="0 0 16 16" width="10" height="10" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg>
 		</button>
-		<MusicPlayer locale={locale} />
+		<MusicPlayer />
 	</div>
 </div>
 
@@ -145,7 +140,7 @@ const t = ui[locale] ?? ui[defaultLang];
 	}
 </style>
 
-<script define:vars={{ pt: { open: t['player.open'], close: t['player.close'] } }}>
+<script define:vars={{ pt: { open: '打开音乐播放器', close: '收起音乐播放器' } }}>
 	const wrapper = document.getElementById('music-toggle');
 	const toggleBtn = document.getElementById('music-toggle-btn');
 	const closeBtn = document.getElementById('music-close-btn');

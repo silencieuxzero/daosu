@@ -1,19 +1,18 @@
 ---
-// 博客首页（三语共用）：站点头部 + 前言板块（不展示文章列表，文章在 /archive）
-import { ui, defaultLang } from '../i18n/ui';
-import { type Lang } from '../i18n/utils';
-import { config, siteText } from '../lib/config';
+// 博客首页：站带头部 + 前言板块（不展示文章列表，文章在 /archive）
+import { config } from '../lib/config';
 
-const { locale = defaultLang } = Astro.props as { locale?: Lang };
-const t = ui[locale] ?? ui[defaultLang];
+// 首页标题/副标题：config.mjs 优先，未配置时回退内置文案
+const heroTitle = config.site.title || '设计与先秦之间';
+const heroTagline =
+	config.site.tagline ||
+	'平面主义与先秦纹样，现代与古代。两种主题之间的一些文字、笔记与记录。';
 
-// 首页标题/副标题：config.mjs 优先，未配置时回退内置翻译
-const heroTitle = siteText(locale, 'title') || t['home.title'];
-const heroTagline = siteText(locale, 'tagline') || t['home.desc'];
-
-// 前言板块：config.mjs [preface] 优先，未配置时回退内置翻译
-const prefaceTitle = config.preface.title[locale] || t['home.preface.title'];
-const prefaceText = config.preface.text[locale] || t['home.preface.text'];
+// 前言板块：config.mjs [preface] 优先，未配置时回退内置文案
+const prefaceTitle = config.preface.title || '序';
+const prefaceText =
+	config.preface.text ||
+	'这座茶馆藏在世界深处。平面与纹样之间，现代与古代之间，是一些文字、笔记与记录。茶已备好，欢迎进来坐坐。';
 // 多段落支持：按空行分段渲染
 const prefaceParas = prefaceText.split(/\n\s*\n/).filter((p) => p.trim());
 
@@ -60,7 +59,7 @@ const decorName = config.decor.home;
 				</div>
 			)
 		}
-		<p class="kicker">{t['home.kicker']}</p>
+		<p class="kicker">个人博客 · 2026</p>
 		<h1 class="site-head__title">{heroTitle}</h1>
 		<p class="site-head__desc">{heroTagline}</p>
 	</header>

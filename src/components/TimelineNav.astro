@@ -12,9 +12,8 @@ interface TimelineItem {
 	theme?: string;
 }
 
-const { timeline = null, locale = 'zh', variant = 'desktop' } = Astro.props as {
+const { timeline = null, variant = 'desktop' } = Astro.props as {
 	timeline?: TimelineItem[] | null;
-	locale?: string;
 	variant?: 'desktop' | 'mobile'; // mobile = 汉堡菜单内实例（移动端专用布局）
 };
 const isMobile = variant === 'mobile';
@@ -80,14 +79,9 @@ const last = items.length - 1;
 		</div>
 	</div>
 </div>
-<script define:vars={{ locale, hasPageTimeline }}>
+<script define:vars={{ hasPageTimeline }}>
 	// 主题名（footer 同步显示）
-	const THEME_LABELS = {
-		zh: { modern: '现代', ancient: '古代' },
-		en: { modern: 'Modern', ancient: 'Ancient' },
-		it: { modern: 'Moderno', ancient: 'Antico' },
-	};
-	const themeLabels = THEME_LABELS[locale] ?? THEME_LABELS.zh;
+	const themeLabels = { modern: '现代', ancient: '古代' };
 
 	// 桌面导航与移动端汉堡菜单各有一个 .tl-nav 实例，统一遍历初始化；
 	// dataset 标记保证幂等（脚本可能被去重执行或重复打包）。

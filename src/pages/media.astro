@@ -9,7 +9,6 @@ import { config } from '../lib/config';
 <Layout title={`多媒体库 · ${config.site.name}`}>
 	<!-- ===== 现代主题图集 ===== -->
 	<GalleryGrid
-		locale="zh"
 		split="modern"
 		images={config.gallery.modern}
 		head={{
@@ -21,7 +20,6 @@ import { config } from '../lib/config';
 
 	<!-- ===== 古代主题图集（bare：不重复渲染头部） ===== -->
 	<GalleryGrid
-		locale="zh"
 		split="ancient"
 		images={config.gallery.ancient}
 		bare

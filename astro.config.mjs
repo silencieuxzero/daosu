@@ -1,16 +1,9 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
-import { i18n } from './config.mjs';
 import remarkSpoiler from './src/lib/remark-spoiler.mjs';
 
 // https://astro.build/config
 export default defineConfig({
-	i18n: {
-		defaultLocale: i18n.default_locale,
-		locales: i18n.locales,
-		// defaultLocale（zh）无前缀：/ 、/about、/blog/xxx
-		// 其他语言带前缀：/en/、/it/、/en/about …
-	},
 	markdown: {
 		// 黑幕语法：%%文字%% → .spoiler（悬停/点击显示）
 		remarkPlugins: [remarkSpoiler],

@@ -1,14 +1,10 @@
 ---
-// 社交链接下拉菜单（顶栏）· 平面主义风格 · 支持多语言
+// 社交链接下拉菜单（顶栏）· 平面主义风格
 import SocialIcon from './SocialIcon.astro';
-import { ui, defaultLang } from '../i18n/ui';
-import type { Lang } from '../i18n/utils';
 
-const { links = [], locale = defaultLang } = Astro.props as {
+const { links = [] } = Astro.props as {
 	links?: { label: string; href: string; icon?: string }[];
-	locale?: Lang;
 };
-const t = ui[locale] ?? ui[defaultLang];
 ---
 
 {
@@ -21,7 +17,7 @@ const t = ui[locale] ?? ui[defaultLang];
 				aria-haspopup="true"
 				aria-expanded="false"
 			>
-				<span>{t['nav.social']}</span>
+				<span>社交</span>
 				<span class="social-toggle__caret" aria-hidden="true">▾</span>
 			</button>
 			<ul id="social-menu" class="social-menu" hidden>

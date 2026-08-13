@@ -1,10 +1,10 @@
 ---
-// 首页（中文，默认语言）
+// 首页
 import Layout from '../layouts/Layout.astro';
 import { config } from '../lib/config';
 import BlogHome from '../components/BlogHome.astro';
 ---
 
-<Layout title=`${config.site.name} · 个人博客`>
-	<BlogHome locale="zh" />
+<Layout title={`${config.site.name} · 个人博客`}>
+	<BlogHome />
 </Layout>

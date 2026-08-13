@@ -9,6 +9,9 @@ const { guest, Content } = Astro.props as {
 };
 import { statusBadgeStyle } from '../lib/status';
 import { getEntry, render } from 'astro:content';
+import { createMarkdownProcessor } from '@astrojs/markdown-remark';
+import remarkSpoiler from '../lib/remark-spoiler.mjs';
+import PuzzleBox from './PuzzleBox.astro';
 import { pairKeyOf } from '../lib/variants';
 const statusText = String(guest.data.status ?? '');
 
@@ -16,6 +19,16 @@ const statusText = String(guest.data.status ?? '');
 // 与主题分套（ancient/ 目录）同构：内容单独成文件，data-era 驱动显隐
 const hasTimeline = (guest.data.timeline?.length ?? 0) > 0;
 const guestSlug = pairKeyOf(guest.id);
+
+// 谜题揭晓文本：markdown 渲染（支持黑幕）
+let puzzleRevealHtml = '';
+if (guest.data.puzzle?.reveal) {
+	const processor = await createMarkdownProcessor({
+		remarkPlugins: [remarkSpoiler],
+		syntaxHighlight: false,
+	});
+	puzzleRevealHtml = (await processor.render(guest.data.puzzle.reveal)).code;
+}
 let eraBlocks: { era: number; title: string; Content: any }[] = [];
 if (hasTimeline) {
 	eraBlocks = await Promise.all(
@@ -83,6 +96,20 @@ if (hasTimeline) {
 			}
 		</div>
 	</div>
+
+	<!-- ===== 谜题（frontmatter 配置 puzzle 时显示） ===== -->
+	<!-- 作答框显示档位由 frontmatter puzzle.era 控制（缺省 = 完整档案 full） -->
+	{
+		guest.data.puzzle && (
+			hasTimeline ? (
+				<div data-era-block={guest.data.puzzle.era ?? 'full'}>
+					<PuzzleBox puzzle={guest.data.puzzle} revealHtml={puzzleRevealHtml} />
+				</div>
+			) : (
+				<PuzzleBox puzzle={guest.data.puzzle} revealHtml={puzzleRevealHtml} />
+			)
+		)
+	}
 
 	<!-- ===== 正文（有 timeline：按时间点分块 + 完整档案；无：原样） ===== -->
 	{

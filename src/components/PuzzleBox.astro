@@ -1,0 +1,212 @@
+---
+// ============================================================
+// 茶客谜题：问题 + 答案校验 + 提示 + 揭晓
+// 数据来自档案 frontmatter 的 puzzle 字段；揭晓文本支持 markdown（含黑幕）
+// 校验规则：忽略大小写与首尾空格
+// ============================================================
+interface Puzzle {
+	question: string;
+	answer: string;
+	hint?: string;
+	reveal?: string;
+}
+
+const { puzzle, revealHtml } = Astro.props as { puzzle: Puzzle; revealHtml: string };
+---
+
+<section class="puzzle" aria-label="谜题">
+	<header class="puzzle__head">
+		<span class="puzzle__tag">谜 · PUZZLE</span>
+		<span class="puzzle__hint-text">档案中藏着一个名字……</span>
+	</header>
+	<p class="puzzle__question">{puzzle.question}</p>
+	<div class="puzzle__form">
+		<input id="puzzle-input" class="puzzle__input" type="text" placeholder="输入你的答案" autocomplete="off" spellcheck="false" aria-label="谜题答案" />
+		<button id="puzzle-submit" class="puzzle__submit" type="button">作答</button>
+		<button id="puzzle-hint" class="puzzle__hint-btn" type="button" hidden>提示</button>
+	</div>
+	<p id="puzzle-feedback" class="puzzle__feedback" role="status"></p>
+	<div id="puzzle-reveal" class="puzzle__reveal" hidden>
+		<div class="puzzle__reveal-inner" set:html={revealHtml} />
+	</div>
+</section>
+
+<style>
+	.puzzle {
+		margin-top: clamp(28px, 4vh, 44px);
+		border: var(--line) solid var(--border);
+		padding: 18px 20px 20px;
+	}
+
+	.puzzle__head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 12px;
+		flex-wrap: wrap;
+		margin-bottom: 12px;
+	}
+
+	.puzzle__tag {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.18em;
+		color: var(--accent);
+	}
+
+	.puzzle__hint-text {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.1em;
+		color: var(--fg-muted);
+	}
+
+	.puzzle__question {
+		margin: 0 0 14px;
+		font-size: 15px;
+		font-weight: 600;
+		line-height: 2;
+	}
+
+	.puzzle__form {
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+
+	.puzzle__input {
+		flex: 1;
+		min-width: 180px;
+		padding: 11px 12px;
+		background: var(--bg);
+		color: var(--fg);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		font: 500 14px/1 var(--font-sans);
+		outline: none;
+		transition: border-color 0.15s ease;
+	}
+
+	.puzzle__input:focus {
+		border-color: var(--accent);
+	}
+
+	.puzzle__submit,
+	.puzzle__hint-btn {
+		padding: 11px 18px;
+		background: var(--fg);
+		color: var(--bg);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		font: 700 12px/1 var(--font-mono);
+		letter-spacing: 0.14em;
+		cursor: pointer;
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+
+	.puzzle__submit:hover,
+	.puzzle__hint-btn:hover {
+		background: var(--accent);
+		color: var(--bg);
+		border-color: var(--accent);
+	}
+
+	.puzzle__submit[disabled] {
+		opacity: 0.5;
+		cursor: default;
+	}
+
+	.puzzle__hint-btn {
+		background: transparent;
+		color: var(--fg-muted);
+	}
+
+	.puzzle__hint-btn:hover {
+		background: var(--fg);
+		color: var(--bg);
+		border-color: var(--border);
+	}
+
+	.puzzle__feedback {
+		margin: 10px 0 0;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.06em;
+		color: var(--fg-muted);
+		min-height: 1em;
+	}
+
+	.puzzle__feedback.is-error {
+		color: var(--accent);
+	}
+
+	.puzzle__reveal {
+		margin-top: 14px;
+		padding: 16px 18px;
+		background: var(--fg);
+		color: var(--bg);
+	}
+
+	.puzzle__reveal[hidden] {
+		display: none;
+	}
+
+	.puzzle__reveal-inner {
+		font-size: 14px;
+		line-height: 2;
+	}
+
+	.puzzle__reveal-inner p { margin: 0 0 0.6em; }
+	.puzzle__reveal-inner p:last-child { margin-bottom: 0; }
+</style>
+
+<script define:vars={{ answer: puzzle.answer, hint: puzzle.hint ?? "" }}>
+	// 谜题校验：忽略大小写、首尾空格与连续空白
+	const input = document.getElementById('puzzle-input');
+	const submit = document.getElementById('puzzle-submit');
+	const hintBtn = document.getElementById('puzzle-hint');
+	const feedback = document.getElementById('puzzle-feedback');
+	const reveal = document.getElementById('puzzle-reveal');
+	const EXPECTED = answer.trim().toLowerCase().replace(/\s+/g, ' ');
+	let solved = false;
+
+	function normalize(s) { return s.trim().toLowerCase().replace(/\s+/g, ' '); }
+
+	function check() {
+		if (solved) return;
+		const v = normalize(input.value);
+		if (!v) {
+			feedback.textContent = '请写下你的答案。';
+			feedback.classList.add('is-error');
+			return;
+		}
+		if (v === EXPECTED) {
+			solved = true;
+			input.disabled = true;
+			submit.disabled = true;
+			hintBtn.hidden = true;
+			feedback.textContent = '答对了。';
+			feedback.classList.remove('is-error');
+			reveal.hidden = false;
+			input.blur();
+		} else {
+			feedback.textContent = '不对，再想想。';
+			feedback.classList.add('is-error');
+			hintBtn.hidden = false;
+		}
+	}
+
+	if (input && submit) {
+		submit.addEventListener('click', check);
+		input.addEventListener('keydown', (e) => { if (e.key === 'Enter') check(); });
+	}
+
+	if (hintBtn && feedback) {
+		hintBtn.addEventListener('click', () => {
+			if (!hint) { feedback.textContent = '没有更多提示了。'; return; }
+			feedback.textContent = '提示：' + hint;
+			feedback.classList.remove('is-error');
+		});
+	}
+</script>

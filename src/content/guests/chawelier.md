@@ -10,6 +10,15 @@ description: 茶馆常客，自称"卖渔翁"或"养鱼的"。藏着许多秘密
 quote: 故事于此开启，永不终结。
 source: 悼溯茶馆 Wiki「查维尔」
 order: 2
+puzzle:
+  question: 实验室炸毁那夜，半截标牌背面写着一个名字。那是谁的名字？
+  answer: Xavier
+  era: 1
+  hint: 一个意识，被封存在最深的记忆里。Ta 说 Ta 就是我。
+  reveal: |
+    Xavier 说，Ta 就是我，我就是 Ta。实验室被毁时，Ta 把自己封存起来，让我忘掉一切才能活下来。
+    Ta 替我记着那些我不敢记得的事。
+    %%故事于此开启，永不终结。%%
 timeline:
   # 各时间点正文单独存放在 src/content/timelines/<slug>/<era>.md
   - era: 0

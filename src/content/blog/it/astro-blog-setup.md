@@ -32,12 +32,12 @@ const blog = defineCollection({
 });
 ```
 
-## Tema: variabili CSS
+## Tema: guidato dalla timeline
 
-Il doppio tema (moderno/antico) ha un solo meccanismo centrale — l'attributo `data-theme` che scambia un insieme di variabili:
+Il doppio tema (moderno/antico) è guidato dal cursore della timeline — ogni epoca dichiara il proprio tema nel frontmatter `timeline[].theme` della scheda dell'ospite:
 
-- `localStorage` ricorda la scelta
-- Uno script inline ripristina il tema prima del primo rendering; nessun lampeggio
+- Trascina la timeline su un'epoca e l'intera pagina cambia tema (colori e contenuti)
+- Uno script inline ripristina il tema dell'epoca predefinita prima del primo rendering; nessun lampeggio
 - Tutte le texture sono data URI SVG — **zero richieste di immagini**
 
 ## Routing: poche pagine

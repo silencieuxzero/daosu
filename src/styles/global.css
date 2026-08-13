@@ -420,7 +420,6 @@ img {
 
 /* 统一按压反馈：平面按钮"按下去"的位移 */
 .btn:active,
-.theme-toggle:active,
 .lang-toggle:active,
 .social-toggle:active,
 .menu-toggle:active,
@@ -598,3 +597,25 @@ main {
   color: #fff;
 }
 
+/* ============================================================
+   时间线正文分套：html[data-era] 决定显示哪个 data-era-block 区块
+   与 data-split（主题分套）同构，由导航栏时间线滑块驱动
+   full = 完整档案（无时间线的页面默认显示，不受影响）
+   ============================================================ */
+[data-era-block] {
+  display: none;
+}
+
+:root:not([data-era]) [data-era-block='full'],
+[data-era='full'] [data-era-block='full'] {
+  display: block;
+}
+
+[data-era='0'] [data-era-block='0'],
+[data-era='1'] [data-era-block='1'],
+[data-era='2'] [data-era-block='2'],
+[data-era='3'] [data-era-block='3'],
+[data-era='4'] [data-era-block='4'],
+[data-era='5'] [data-era-block='5'] {
+  display: block;
+}

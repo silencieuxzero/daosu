@@ -1,10 +1,11 @@
 ---
 import '../styles/global.css';
-import ThemeToggle from '../components/ThemeToggle.astro';
 import MusicToggle from '../components/MusicToggle.astro';
 import SocialDropdown from '../components/SocialDropdown.astro';
 import SocialIcon from '../components/SocialIcon.astro';
 import NavGroupDropdown from '../components/NavGroupDropdown.astro';
+import TimelineNav from '../components/TimelineNav.astro';
+import { getCollection } from 'astro:content';
 import { localizedPath, languages, type Lang } from '../i18n/utils';
 import { ui, defaultLang } from '../i18n/ui';
 import { config } from '../lib/config';
@@ -75,6 +76,18 @@ const langLinks = (Object.keys(languages) as Lang[])
 // 而是注入 --modern-accent / --ancient-accent，由各主题变量组自行引用
 const themeStyle = `--modern-accent: ${config.theme.accent}; --ancient-accent: ${config.theme.ancient_accent};`;
 const textures = config.theme.enable_textures ? 'on' : 'off';
+
+// 时间线数据（构建期收集：frontmatter 配置了 timeline 字段的茶客）
+const timelineGuests = (await getCollection('guests'))
+	.filter((g) => g.data.timeline?.length)
+	.map((g) => ({ name: g.data.name, timeline: g.data.timeline }));
+
+// 时间线默认主题：有时间线时 = 第一个茶客“现在”档的 theme，否则 config 默认
+const eraDefaultTheme =
+	timelineGuests.length > 0
+		? (timelineGuests[0].timeline[timelineGuests[0].timeline.length - 1]?.theme ??
+			config.theme.default)
+		: config.theme.default;
 ---
 
 <!doctype html>
@@ -82,7 +95,7 @@ const textures = config.theme.enable_textures ? 'on' : 'off';
 	lang={locale === 'zh' ? 'zh-CN' : locale}
 	data-theme="modern"
 	data-textures={textures}
-	data-default-theme={config.theme.default}
+	data-default-theme={eraDefaultTheme}
 	style={themeStyle}
 >
 	<head>
@@ -95,10 +108,9 @@ const textures = config.theme.enable_textures ? 'on' : 'off';
 		<!-- 首帧前恢复主题，避免闪烁（FOUC）；默认主题来自 config.mjs -->
 		<script is:inline>
 			(function () {
-				var DEFAULT_THEME =
+				// 主题由时间线驱动（data-default-theme 已注入默认档），不再使用 localStorage
+				var theme =
 					document.documentElement.getAttribute('data-default-theme') || 'modern';
-				var t = localStorage.getItem('daosu-theme');
-				var theme = t === 'ancient' || t === 'modern' ? t : DEFAULT_THEME;
 				document.documentElement.setAttribute('data-theme', theme);
 			})();
 		</script>
@@ -133,6 +145,11 @@ const textures = config.theme.enable_textures ? 'on' : 'off';
 						visibleGroups.map((group) => (
 							<NavGroupDropdown group={group} locale={locale} />
 						))
+					}
+					{
+						timelineGuests.length > 0 && (
+							<TimelineNav guests={timelineGuests} locale={locale} />
+						)
 					}
 				</nav>
 				<SocialDropdown class="topbar__dropdown" links={config.social.links} locale={locale} />
@@ -171,7 +188,6 @@ const textures = config.theme.enable_textures ? 'on' : 'off';
 						</div>
 					)
 				}
-				<ThemeToggle locale={locale} />
 				<button
 					id="menu-toggle"
 					class="menu-toggle"

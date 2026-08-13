@@ -32,12 +32,12 @@ const blog = defineCollection({
 });
 ```
 
-## Theme: CSS Variables
+## Theme: Driven by the Timeline
 
-The dual theme (modern/ancient) has one core mechanism — a `data-theme` attribute swapping a set of variables:
+The dual theme (modern/ancient) is driven by the timeline slider — each era declares its theme in the guest profile's `timeline[].theme` frontmatter:
 
-- `localStorage` remembers the choice
-- An inline script restores the theme before first paint; no flash
+- Drag the timeline to an era and the whole page switches theme (colors and content split)
+- An inline script restores the default era's theme before first paint; no flash
 - All textures are SVG data URIs — **zero image requests**
 
 ## Routing: A Handful of Pages

@@ -10,6 +10,20 @@ description: 茶馆常客，自称"卖渔翁"或"养鱼的"。藏着许多秘密
 quote: 故事于此开启，永不终结。
 source: 悼溯茶馆 Wiki「查维尔」
 order: 2
+timeline:
+  # 各时间点正文单独存放在 src/content/timelines/<slug>/<era>.md
+  - era: 0
+    label: 实验体 X-430
+    title: 培养舱与半截标牌
+    theme: modern
+  - era: 1
+    label: 千年流浪
+    title: 被当作妖物的年月
+    theme: ancient
+  - era: 2
+    label: 悼溯茶馆
+    title: 靠窗的位置，茶已沏好
+    theme: modern
 ---
 
 ## 简介

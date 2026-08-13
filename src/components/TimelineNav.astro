@@ -1,0 +1,445 @@
+---
+// ============================================================
+// 导航栏时间线：顶栏按钮点击展开时间线卡片
+// 数据来自茶客档案 frontmatter 的 timeline 字段（Layout 构建期收集）
+// 卡片内可切换茶客；滑块驱动场景显隐；点击外部/Escape 关闭
+// ============================================================
+interface TimelineItem {
+	era: number;
+	label: string;
+	title: string;
+	theme?: string;
+}
+interface TimelineGuest {
+	name: string;
+	timeline: TimelineItem[];
+}
+
+const { guests, locale = 'zh' } = Astro.props as { guests: TimelineGuest[]; locale?: string };
+---
+
+<div class="tl-nav">
+	<button
+		id="tl-nav-toggle"
+		class="tl-nav__toggle"
+		type="button"
+		aria-haspopup="true"
+		aria-expanded="false"
+	>
+		<span>时间线</span>
+		<span class="tl-nav__caret" aria-hidden="true">▾</span>
+	</button>
+
+	<div id="tl-nav-panel" class="tl-nav__panel" hidden>
+		<header class="tl-nav__head">
+			<span class="tl-nav__kicker">时间线 · TIMELINE</span>
+			<span class="tl-nav__hint">拖动滑块查看不同时期</span>
+		</header>
+
+		{
+			guests.length > 1 && (
+				<div class="tl-nav__guests">
+					{guests.map((g, i) => (
+						<button class="tl-nav__guest" type="button" data-guest={i}>{g.name}</button>
+					))}
+				</div>
+			)
+		}
+
+		<div class="tl-nav__body">
+			{guests.map((g, gi) => (
+				<div class="tl-nav__block" data-block={gi}>
+					<input
+						class="tl-nav__range"
+						type="range"
+						min="0"
+						max={g.timeline.length}
+						step="1"
+						value={g.timeline.length - 1}
+						aria-label="时间线位置"
+					/>
+					<div class="tl-nav__marks">
+						{g.timeline.map((it, i) => (
+							<span
+								class="tl-nav__mark"
+								data-era={it.era}
+								data-theme={it.theme}
+								style={`left: calc(10px + (100% - 20px) * ${i} / ${g.timeline.length})`}
+							>{it.label}</span>
+						))}
+						<span
+							class="tl-nav__mark"
+							data-era={g.timeline.length}
+							style={`left: calc(10px + (100% - 20px) * ${g.timeline.length} / ${g.timeline.length})`}
+						>完整档案</span>
+					</div>
+					<div class="tl-nav__scenes">
+						{g.timeline.map((it) => (
+							<div class="tl-nav__scene" data-scene={it.era}>
+								<h4 class="tl-nav__title">{it.title}</h4>
+							</div>
+						))}
+						<div class="tl-nav__scene" data-scene={g.timeline.length}>
+							<h4 class="tl-nav__title">完整档案</h4>
+						</div>
+					</div>
+				</div>
+			))}
+		</div>
+	</div>
+</div>
+<script define:vars={{ locale }}>
+	// 主题名（footer 同步显示）
+	const THEME_LABELS = {
+		zh: { modern: '现代', ancient: '古代' },
+		en: { modern: 'Modern', ancient: 'Ancient' },
+		it: { modern: 'Moderno', ancient: 'Antico' },
+	};
+	const themeLabels = THEME_LABELS[locale] ?? THEME_LABELS.zh;
+	// 下拉开关：点击切换、外部点击关闭、Escape 关闭（与 NavGroupDropdown 同模式）
+	const toggle = document.getElementById('tl-nav-toggle');
+	const panel = document.getElementById('tl-nav-panel');
+	const guestBtns = panel ? Array.from(panel.querySelectorAll('.tl-nav__guest')) : [];
+	const blocks = panel ? Array.from(panel.querySelectorAll('.tl-nav__block')) : [];
+
+	if (toggle && panel) {
+		toggle.addEventListener('click', (e) => {
+			e.stopPropagation();
+			panel.hidden = !panel.hidden;
+			toggle.setAttribute('aria-expanded', String(!panel.hidden));
+			if (!panel.hidden) fitPanelWidth();
+		});
+
+		// 捕获阶段：点击页面任意处（含其他下拉按钮）先关闭本卡片
+		document.addEventListener(
+			'click',
+			(e) => {
+				if (
+					!panel.hidden &&
+					(!(e.target instanceof Node) || !panel.contains(e.target)) &&
+					e.target !== toggle
+				) {
+					panel.hidden = true;
+					toggle.setAttribute('aria-expanded', 'false');
+				}
+			},
+			true
+		);
+
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape' && !panel.hidden) {
+				panel.hidden = true;
+				toggle.setAttribute('aria-expanded', 'false');
+				toggle.focus();
+			}
+		});
+	}
+
+	// 首尾刻度与滑块按钮对齐 + 卡片自适应：
+	// 首/末刻度居中时，其半宽可能超出锚点（10px），通过整体平移滑块行与刻度行
+	// （margin-left/right = 半宽 - 10）使文字中心与按钮中心对齐且不溢出卡片
+	function fitPanelWidth() {
+		if (!panel || panel.hidden) return;
+		let maxW = 0;
+		blocks.forEach((b) => {
+			if (!b.classList.contains('is-active')) return;
+			const marks = b.querySelectorAll('.tl-nav__mark');
+			const range = b.querySelector('.tl-nav__range');
+			const marksEl = b.querySelector('.tl-nav__marks');
+			if (!marks.length || !range || !marksEl) return;
+			marks.forEach((m) => { maxW = Math.max(maxW, m.offsetWidth); });
+			// 平移量：首/末刻度半宽超出锚点 10px 的部分
+			const ml = Math.max(0, marks[0].offsetWidth / 2 - 10);
+			const mr = Math.max(0, marks[marks.length - 1].offsetWidth / 2 - 10);
+			range.style.marginLeft = ml + 'px';
+			range.style.marginRight = mr + 'px';
+			range.style.width = 'calc(100% - ' + (ml + mr) + 'px)';
+			marksEl.style.marginLeft = ml + 'px';
+			marksEl.style.marginRight = mr + 'px';
+		});
+		// 卡片宽度兜底：包住最宽刻度（+ padding 40 + 余量）
+		if (maxW > 0) panel.style.minWidth = maxW + 44 + 'px';
+	}
+
+	// 滑块驱动场景显隐
+	function syncScenes(block) {
+		const range = block.querySelector('.tl-nav__range');
+		if (!range) return;
+		const v = Number(range.value);
+		block.querySelectorAll('.tl-nav__scene').forEach((s, i) => s.classList.toggle('is-active', i === v));
+		block.querySelectorAll('.tl-nav__mark').forEach((m) => m.classList.toggle('is-active', Number(m.dataset.era) === v));
+	}
+
+	// 滑块值 → 全局 data-era（正文分套；末档 = 完整档案）
+	function eraValue(range) {
+		return Number(range.value) === Number(range.max) ? 'full' : String(range.value);
+	}
+
+	function syncFooterTheme(theme) {
+		const el = document.getElementById('footer-theme');
+		if (el) el.textContent = theme === 'ancient' ? themeLabels.ancient : themeLabels.modern;
+	}
+
+	function applyEra(range, block) {
+		const v = eraValue(range);
+		const root = document.documentElement;
+		root.setAttribute('data-era', v);
+		// 该时间点配置的主题（frontmatter timeline[].theme）→ 驱动全局主题与正文分套
+		if (v !== 'full') {
+			const mark = block.querySelector('.tl-nav__mark[data-era="' + v + '"]');
+			const theme = mark && mark.dataset.theme ? mark.dataset.theme : null;
+			if (theme) {
+				root.setAttribute('data-theme', theme);
+				syncFooterTheme(theme);
+			}
+		}
+	}
+
+	blocks.forEach((b) => {
+		const range = b.querySelector('.tl-nav__range');
+		if (range)
+			range.addEventListener('input', () => {
+				syncScenes(b);
+				applyEra(range, b);
+			});
+	});
+
+	// 茶客切换：重置到该茶客最后一个时间点（“现在”）
+	function switchGuest(i) {
+		guestBtns.forEach((b, j) => b.classList.toggle('is-active', j === i));
+		blocks.forEach((b, j) => b.classList.toggle('is-active', j === i));
+		const range = blocks[i] ? blocks[i].querySelector('.tl-nav__range') : null;
+		if (range) {
+			range.value = String(Number(range.max) - 1); // 停在“现在”
+			syncScenes(blocks[i]);
+			applyEra(range, blocks[i]);
+		}
+	}
+	fitPanelWidth();
+
+	guestBtns.forEach((btn) => {
+		btn.addEventListener('click', () => switchGuest(Number(btn.dataset.guest)));
+	});
+
+	if (blocks.length) switchGuest(0);
+	window.addEventListener('load', () => { if (panel && !panel.hidden) fitPanelWidth(); });
+</script>
+<style>
+	/* ===== 导航栏时间线：按钮（与 nav-group 同款） ===== */
+	.tl-nav {
+		position: relative;
+		display: inline-flex;
+	}
+
+	.tl-nav__toggle {
+		display: flex;
+		align-items: center;
+		gap: 7px;
+		padding: 9px 12px;
+		background: var(--bg);
+		color: var(--fg-muted);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		font: 700 12px/1 var(--font-mono);
+		letter-spacing: 0.12em;
+		cursor: pointer;
+		transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+	}
+
+	.tl-nav__toggle:hover {
+		background: var(--fg);
+		color: var(--bg);
+	}
+
+	.tl-nav__toggle[aria-expanded='true'] {
+		background: var(--accent);
+		color: var(--bg);
+		border-color: var(--accent);
+	}
+
+	.tl-nav__caret {
+		font-size: 10px;
+		line-height: 1;
+		transition: transform 0.15s ease;
+	}
+
+	.tl-nav__toggle[aria-expanded='true'] .tl-nav__caret {
+		transform: rotate(180deg);
+	}
+
+	/* ===== 下拉卡片 ===== */
+	.tl-nav__panel {
+		position: absolute;
+		top: calc(100% + 6px);
+		right: 0;
+		width: 460px;
+	max-width: calc(100vw - 32px); /* 窄屏兜底 */
+		background: var(--bg);
+		border: var(--line) solid var(--border);
+		z-index: 80;
+		padding: 18px 20px 20px;
+	}
+
+	.tl-nav__panel[hidden] {
+		display: none;
+	}
+
+	.tl-nav__head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 12px;
+		flex-wrap: wrap;
+		margin-bottom: 14px;
+	}
+
+	.tl-nav__kicker {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.18em;
+		color: var(--accent);
+	}
+
+	.tl-nav__hint {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.1em;
+		color: var(--fg-muted);
+	}
+
+	/* 茶客切换 */
+	.tl-nav__guests {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		margin-bottom: 16px;
+	}
+
+	.tl-nav__guest {
+		padding: 5px 10px;
+		background: var(--bg-alt);
+		color: var(--fg-muted);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		font: 600 11px/1 var(--font-mono);
+		letter-spacing: 0.1em;
+		cursor: pointer;
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+
+	.tl-nav__guest:hover {
+		background: var(--fg);
+		color: var(--bg);
+	}
+
+	.tl-nav__guest.is-active {
+		background: var(--accent);
+		color: var(--bg);
+		border-color: var(--accent);
+	}
+
+	/* 滑块 / 刻度 / 场景 */
+	.tl-nav__block {
+		display: none;
+	}
+
+	.tl-nav__block.is-active {
+		display: block;
+	}
+
+	.tl-nav__range {
+		-webkit-appearance: none;
+		appearance: none;
+		width: 100%;
+		height: 2px;
+		background: var(--grid-line);
+		outline: none;
+		cursor: pointer;
+		display: block;
+	}
+
+	.tl-nav__range::-webkit-slider-thumb {
+		-webkit-appearance: none;
+		appearance: none;
+		width: 14px;
+		height: 14px;
+		border-radius: 50%;
+		background: var(--fg);
+		border: 3px solid var(--bg);
+		box-shadow: 0 0 0 2px var(--border);
+		transition: background-color 0.15s ease;
+	}
+
+	.tl-nav__range:hover::-webkit-slider-thumb {
+		background: var(--accent);
+	}
+
+	.tl-nav__range::-moz-range-thumb {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: var(--fg);
+		border: 3px solid var(--bg);
+		box-shadow: 0 0 0 2px var(--border);
+		transition: background-color 0.15s ease;
+	}
+
+	.tl-nav__range:hover::-moz-range-thumb {
+		background: var(--accent);
+	}
+
+	.tl-nav__marks {
+		position: relative;
+		height: 14px;
+		margin-top: 10px;
+	}
+
+	/* 刻度绝对定位：中心精确落在 thumb 可达等分点（thumb 半宽 10px） */
+	.tl-nav__mark {
+		position: absolute;
+		top: 0;
+		transform: translateX(-50%);
+		white-space: nowrap;
+		font-family: var(--font-mono);
+		font-size: 10px;
+		letter-spacing: 0.06em;
+		color: var(--fg-muted);
+		transition: color 0.15s ease;
+	}
+
+	.tl-nav__mark.is-active {
+		color: var(--fg);
+		font-weight: 700;
+	}
+
+	.tl-nav__scenes {
+		margin-top: 16px;
+		min-height: 48px;
+	}
+
+	.tl-nav__scene {
+		display: none;
+		padding: 14px 16px;
+		background-color: var(--bg-alt);
+		border-left: 3px solid var(--accent);
+	}
+
+	.tl-nav__scene.is-active {
+		display: block;
+		animation: tlNavFade 0.35s ease;
+	}
+
+	@keyframes tlNavFade {
+		from { opacity: 0; transform: translateY(6px); }
+		to { opacity: 1; transform: none; }
+	}
+
+	.tl-nav__title {
+		margin: 0 0 6px;
+		font-size: 15px;
+		font-weight: 800;
+		letter-spacing: 0.02em;
+	}
+
+</style>

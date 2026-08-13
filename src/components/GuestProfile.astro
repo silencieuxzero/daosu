@@ -8,7 +8,24 @@ const { guest, Content } = Astro.props as {
 	Content: any;
 };
 import { statusBadgeStyle } from '../lib/status';
+import { getEntry, render } from 'astro:content';
+import { pairKeyOf } from '../lib/variants';
 const statusText = String(guest.data.status ?? '');
+
+// 时间线正文分块：各 era 正文从独立文件加载（src/content/timelines/<slug>/<era>.md）
+// 与主题分套（ancient/ 目录）同构：内容单独成文件，data-era 驱动显隐
+const hasTimeline = (guest.data.timeline?.length ?? 0) > 0;
+const guestSlug = pairKeyOf(guest.id);
+let eraBlocks: { era: number; title: string; Content: any }[] = [];
+if (hasTimeline) {
+	eraBlocks = await Promise.all(
+		guest.data.timeline.map(async (it: any) => {
+			const entry = await getEntry('timelines', `${guestSlug}/${it.era}`);
+			const rendered = entry ? await render(entry) : null;
+			return { era: it.era, title: it.title, Content: rendered?.Content ?? null };
+		})
+	);
+}
 ---
 
 <article class="guest">
@@ -67,10 +84,29 @@ const statusText = String(guest.data.status ?? '');
 		</div>
 	</div>
 
-	<!-- ===== 正文（简介 / 履历 / 能力） ===== -->
-	<div class="guest__body prose">
-		<Content />
-	</div>
+	<!-- ===== 正文（有 timeline：按时间点分块 + 完整档案；无：原样） ===== -->
+	{
+		hasTimeline ? (
+			<div class="guest__body">
+				{
+					eraBlocks.map((e) => (
+						<div class="guest__era prose" data-era-block={e.era}>
+							<h2 class="guest__era-title">{e.title}</h2>
+							{e.Content ? <e.Content /> : <p class="guest__era-missing">该时期的内容尚未撰写。</p>}
+						</div>
+					))
+				}
+				<div class="guest__era prose" data-era-block="full">
+					<Content />
+				</div>
+			</div>
+		) : (
+			<div class="guest__body prose">
+				<Content />
+			</div>
+		)
+	}
+
 
 	{
 		guest.data.source && (
@@ -215,6 +251,30 @@ const statusText = String(guest.data.status ?? '');
 	/* ===== 正文（复用 .prose 排版） ===== */
 	.guest__body {
 		margin-top: clamp(28px, 4vh, 44px);
+	}
+
+	/* 时间线 era 分块标题 */
+	.guest__era {
+		padding-bottom: 8px;
+	}
+
+	.guest__era-missing {
+		margin: 0;
+		padding: 18px;
+		border: var(--line) dashed var(--border);
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.1em;
+		color: var(--fg-muted);
+	}
+
+	.guest__era-title {
+		margin: 0 0 14px;
+		padding-bottom: 10px;
+		font-size: 18px;
+		font-weight: 800;
+		letter-spacing: 0.04em;
+		border-bottom: var(--line) solid var(--border);
 	}
 
 	/* ===== 来源 ===== */

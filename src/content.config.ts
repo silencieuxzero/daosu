@@ -28,6 +28,16 @@ const guests = defineCollection({
     quote: z.string().optional(),   // 语录
     source: z.string().optional(),  // 档案来源（wiki 页面名）
     order: z.number().default(99),  // 展示顺序
+    timeline: z
+      .array(
+        z.object({
+          era: z.number(),   // 时间点序号（0 起，由滑块驱动）
+          label: z.string(), // 刻度名（滑块下方显示）
+          title: z.string(), // 该时间点的标题（正文在 timelines 集合单独成文件）
+          theme: z.enum(['modern', 'ancient']).optional(), // 该时间点使用的主题（缺省不改变主题）
+        })
+      )
+      .default([]), // 时间线（可选）：导航栏滑块驱动，正文从 src/content/timelines/ 加载
   }),
 });
 
@@ -45,4 +55,16 @@ const stories = defineCollection({
   }),
 });
 
-export const collections = { blog, guests, stories };
+// 时间线内容集合（src/content/timelines/<slug>/<era>.md）
+// 茶客档案 timeline 各时间点的正文：独立文件加载，与 ancient/ 主题分套同构，
+// 由全局 data-era（导航栏时间线滑块）驱动显隐
+const timelines = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/timelines' }),
+  schema: z.object({
+    guest: z.string(),       // 关联茶客 slug（guests 配对键，如 chawelier）
+    era: z.number(),         // 时间点序号（对应档案 frontmatter timeline[].era）
+    title: z.string().optional(), // 标题（可选；页面优先用档案 frontmatter 的 title）
+  }),
+});
+
+export const collections = { blog, guests, stories, timelines };

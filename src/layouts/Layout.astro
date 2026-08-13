@@ -9,6 +9,7 @@ import { getCollection } from 'astro:content';
 import { localizedPath, languages, type Lang } from '../i18n/utils';
 import { ui, defaultLang } from '../i18n/ui';
 import { config } from '../lib/config';
+import { pairKeyOf } from '../lib/variants';
 
 const {
 	title = `${config.site.name} · ${ui[defaultLang]['footer.type']}`,
@@ -77,16 +78,26 @@ const langLinks = (Object.keys(languages) as Lang[])
 const themeStyle = `--modern-accent: ${config.theme.accent}; --ancient-accent: ${config.theme.ancient_accent};`;
 const textures = config.theme.enable_textures ? 'on' : 'off';
 
-// 时间线数据（构建期收集：frontmatter 配置了 timeline 字段的茶客）
-const timelineGuests = (await getCollection('guests'))
-	.filter((g) => g.data.timeline?.length)
-	.map((g) => ({ name: g.data.name, timeline: g.data.timeline }));
+// 时间线索引：内容源 + slug → timeline 配置（guests / stories 各自配置）
+const timelineIndex = new Map<string, any[]>();
+for (const entry of await getCollection('guests')) {
+	if (entry.data.timeline?.length) timelineIndex.set(`guests/${pairKeyOf(entry.id)}`, entry.data.timeline);
+}
+for (const entry of await getCollection('stories')) {
+	if (entry.data.timeline?.length) timelineIndex.set(`stories/${pairKeyOf(entry.id)}`, entry.data.timeline);
+}
 
-// 时间线默认主题：有时间线时 = 第一个茶客“现在”档的 theme，否则 config 默认
+// 当前页面匹配（剥离语言前缀）：/guests/xxx/ → guests/xxx；未匹配 → null（默认两节点）
+const LANGS = Object.keys(languages);
+const pathSegs = Astro.url.pathname.split('/').filter(Boolean);
+const segs = LANGS.includes(pathSegs[0] ?? '') ? pathSegs.slice(1) : pathSegs;
+const pageTimeline: any[] | null =
+	segs.length >= 2 ? (timelineIndex.get(`${segs[0]}/${segs[1]}`) ?? null) : null;
+
+// 默认主题：当前页面时间线“现在”档的 theme，否则 config 默认
 const eraDefaultTheme =
-	timelineGuests.length > 0
-		? (timelineGuests[0].timeline[timelineGuests[0].timeline.length - 1]?.theme ??
-			config.theme.default)
+	pageTimeline && pageTimeline.length > 0
+		? (pageTimeline[pageTimeline.length - 1]?.theme ?? config.theme.default)
 		: config.theme.default;
 ---
 
@@ -146,11 +157,7 @@ const eraDefaultTheme =
 							<NavGroupDropdown group={group} locale={locale} />
 						))
 					}
-					{
-						timelineGuests.length > 0 && (
-							<TimelineNav guests={timelineGuests} locale={locale} />
-						)
-					}
+					<TimelineNav timeline={pageTimeline} locale={locale} />
 				</nav>
 				<SocialDropdown class="topbar__dropdown" links={config.social.links} locale={locale} />
 				{

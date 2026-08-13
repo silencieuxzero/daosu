@@ -4,6 +4,16 @@ description: 根据作者的一次梦改编而来。疲惫的洛疏律沉入梦�
 tags: [洛疏律, 短篇]
 source: 悼溯茶馆 Wiki「梦.现实」
 order: 2
+timeline:
+  - era: 0
+    label: 入睡前
+    title: 夜幕降临
+  - era: 1
+    label: 天台坠落
+    title: 成为灵魂
+  - era: 2
+    label: 醒来
+    title: 天边泛白
 ---
 
 夜幕降临，墨色的天空笼罩了城市，也笼罩了无数人的梦。在经历了一天的疲惫后，洛疏律躺在了茶客房间的床上，准备休息。

@@ -33,7 +33,7 @@ let eraBlocks: { era: number; title: string; Content: any }[] = [];
 if (hasTimeline) {
 	eraBlocks = await Promise.all(
 		guest.data.timeline.map(async (it: any) => {
-			const entry = await getEntry('timelines', `${guestSlug}/${it.era}`);
+			const entry = await getEntry('timelines', `guests/${guestSlug}/${it.era}`);
 			const rendered = entry ? await render(entry) : null;
 			return { era: it.era, title: it.title, Content: rendered?.Content ?? null };
 		})

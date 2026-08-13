@@ -5,7 +5,8 @@ import Layout from '../../layouts/Layout.astro';
 import { config } from '../../lib/config';
 import { getCollection, render } from 'astro:content';
 import { formatDate, defaultLang } from '../../i18n/utils';
-import { pairEntries, entryFor } from '../../lib/variants';
+import { pairEntries, entryFor, pairKeyOf } from '../../lib/variants';
+import { getEntry } from 'astro:content';
 
 export async function getStaticPaths() {
 	const all = await getCollection('stories');
@@ -36,6 +37,20 @@ const next = idx >= 0 && idx < all.length - 1 ? all[idx + 1] : null;
 const navName = (p: any) => p.modern?.data.title ?? p.ancient?.data.title ?? '';
 
 const fmt = (d?: Date) => (d ? formatDate(d, defaultLang) : '');
+
+// 时间线 era 分块：正文从 src/content/timelines/stories/<slug>/<era>.md 加载
+const storySlug = modernStory ? pairKeyOf(modernStory.id) : '';
+const hasTimeline = (modernStory?.data.timeline?.length ?? 0) > 0;
+let storyEraBlocks: { era: number; title: string; Content: any }[] = [];
+if (hasTimeline && storySlug) {
+	storyEraBlocks = await Promise.all(
+		modernStory.data.timeline.map(async (it: any) => {
+			const entry = await getEntry('timelines', `stories/${storySlug}/${it.era}`);
+			const rendered = entry ? await render(entry) : null;
+			return { era: it.era, title: it.title, Content: rendered?.Content ?? null };
+		})
+	);
+}
 ---
 
 <Layout title={`${primary.data.title} · 茶馆故事 · ${config.site.name}`}>
@@ -68,7 +83,20 @@ const fmt = (d?: Date) => (d ? formatDate(d, defaultLang) : '');
 							</div>
 						)}
 					</header>
-					<ModernContent />
+					{hasTimeline && (
+						<>
+							{storyEraBlocks.map((e) => (
+								<div data-era-block={e.era}>
+									<h2 class="story-era__title">{e.title}</h2>
+									{e.Content ? <e.Content /> : <p>该时期的内容尚未撰写。</p>}
+								</div>
+							))}
+							<div data-era-block="full">
+								<ModernContent />
+							</div>
+						</>
+					)}
+					{!hasTimeline && <ModernContent />}
 				</article>
 				{modernStory.data.source && (
 					<p class="story__source">
@@ -149,6 +177,16 @@ const fmt = (d?: Date) => (d ? formatDate(d, defaultLang) : '');
 
 	.back {
 		margin-bottom: clamp(24px, 3vh, 36px);
+	}
+
+	/* ===== 时间线 era 分块标题 ===== */
+	.story-era__title {
+		margin: 0 0 16px;
+		padding-bottom: 10px;
+		font-size: 18px;
+		font-weight: 800;
+		letter-spacing: 0.04em;
+		border-bottom: var(--line) solid var(--border);
 	}
 
 	/* ===== 故事头部 ===== */

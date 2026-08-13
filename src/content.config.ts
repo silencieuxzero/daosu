@@ -2,6 +2,20 @@ import { defineCollection } from 'astro:content';
 import { z } from 'astro/zod';
 import { glob } from 'astro/loaders';
 
+// ============================================================
+// 时间线配置（guests / stories 共用）：每项一个时间点
+// era   时间点序号（0 起，由滑块驱动）
+// label 刻度名（滑块下方显示）
+// title 该时间点的标题（正文在 timelines 集合单独成文件）
+// theme 该时间点使用的主题（缺省不改变主题）
+// ============================================================
+const timelineItemSchema = z.object({
+  era: z.number(),
+  label: z.string(),
+  title: z.string(),
+  theme: z.enum(['modern', 'ancient']).optional(),
+});
+
 // 博客文章内容集合（Astro 5+ Content Layer：显式 glob loader）
 const blog = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/blog' }),
@@ -37,16 +51,7 @@ const guests = defineCollection({
         era: z.number().optional(),    // 作答框显示的时间点（timeline[].era）；-1 = 完整档案档；缺省同 -1
       })
       .optional(), // 谜题（可选）：档案页显示答案校验
-    timeline: z
-      .array(
-        z.object({
-          era: z.number(),   // 时间点序号（0 起，由滑块驱动）
-          label: z.string(), // 刻度名（滑块下方显示）
-          title: z.string(), // 该时间点的标题（正文在 timelines 集合单独成文件）
-          theme: z.enum(['modern', 'ancient']).optional(), // 该时间点使用的主题（缺省不改变主题）
-        })
-      )
-      .default([]), // 时间线（可选）：导航栏滑块驱动，正文从 src/content/timelines/ 加载
+    timeline: z.array(timelineItemSchema).default([]), // 时间线（可选）：正文从 src/content/timelines/ 加载
   }),
 });
 
@@ -61,6 +66,7 @@ const stories = defineCollection({
     tags: z.array(z.string()).default([]),
     source: z.string().optional(),       // 来源（wiki 页面名）
     order: z.number().default(99),       // 展示顺序
+    timeline: z.array(timelineItemSchema).default([]), // 时间线（可选）：正文从 src/content/timelines/stories/ 加载
   }),
 });
 
@@ -70,7 +76,7 @@ const stories = defineCollection({
 const timelines = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/timelines' }),
   schema: z.object({
-    guest: z.string(),       // 关联茶客 slug（guests 配对键，如 chawelier）
+    ref: z.string(),         // 关联内容 slug（配对键；注意不能叫 slug，会被 glob loader 当作条目 id）
     era: z.number(),         // 时间点序号（对应档案 frontmatter timeline[].era）
     title: z.string().optional(), // 标题（可选；页面优先用档案 frontmatter 的 title）
   }),

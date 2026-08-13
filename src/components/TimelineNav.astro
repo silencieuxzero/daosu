@@ -1,21 +1,33 @@
 ---
 // ============================================================
 // 导航栏时间线：顶栏按钮点击展开时间线卡片
-// 数据来自茶客档案 frontmatter 的 timeline 字段（Layout 构建期收集）
-// 卡片内可切换茶客；滑块驱动场景显隐；点击外部/Escape 关闭
+// 页面级：当前页面配置了 timeline → 渲染该时间线（滑块驱动 era 正文 + 主题）
+// 未配置 → 默认两节点「古代 / 现代」（纯主题切换）
+// 数据由 Layout 按当前路径匹配后传入
 // ============================================================
 interface TimelineItem {
-	era: number;
+	era: number | string; // 'full' = 完整档案档
 	label: string;
 	title: string;
 	theme?: string;
 }
-interface TimelineGuest {
-	name: string;
-	timeline: TimelineItem[];
-}
 
-const { guests, locale = 'zh' } = Astro.props as { guests: TimelineGuest[]; locale?: string };
+const { timeline = null, locale = 'zh' } = Astro.props as {
+	timeline?: TimelineItem[] | null;
+	locale?: string;
+};
+
+// 无页面时间线 → 默认两节点：古代（ancient）/ 现代（modern）
+const DEFAULT_ITEMS: TimelineItem[] = [
+	{ era: 0, label: '古代', title: '古代 · Ancient', theme: 'ancient' },
+	{ era: 1, label: '现代', title: '现代 · Modern', theme: 'modern' },
+];
+const hasPageTimeline = timeline && timeline.length > 0;
+// 页面时间线末尾追加“完整档案”档（对应 data-era-block=full；不改变主题）
+const items: TimelineItem[] = hasPageTimeline
+	? [...timeline, { era: 'full', label: '完整档案', title: '完整档案' }]
+	: DEFAULT_ITEMS;
+const last = items.length - 1;
 ---
 
 <div class="tl-nav">
@@ -36,59 +48,37 @@ const { guests, locale = 'zh' } = Astro.props as { guests: TimelineGuest[]; loca
 			<span class="tl-nav__hint">拖动滑块查看不同时期</span>
 		</header>
 
-		{
-			guests.length > 1 && (
-				<div class="tl-nav__guests">
-					{guests.map((g, i) => (
-						<button class="tl-nav__guest" type="button" data-guest={i}>{g.name}</button>
-					))}
-				</div>
-			)
-		}
-
-		<div class="tl-nav__body">
-			{guests.map((g, gi) => (
-				<div class="tl-nav__block" data-block={gi}>
-					<input
-						class="tl-nav__range"
-						type="range"
-						min="0"
-						max={g.timeline.length}
-						step="1"
-						value={g.timeline.length - 1}
-						aria-label="时间线位置"
-					/>
-					<div class="tl-nav__marks">
-						{g.timeline.map((it, i) => (
-							<span
-								class="tl-nav__mark"
-								data-era={it.era}
-								data-theme={it.theme}
-								style={`left: calc(10px + (100% - 20px) * ${i} / ${g.timeline.length})`}
-							>{it.label}</span>
-						))}
-						<span
-							class="tl-nav__mark"
-							data-era={g.timeline.length}
-							style={`left: calc(10px + (100% - 20px) * ${g.timeline.length} / ${g.timeline.length})`}
-						>完整档案</span>
+		<div class="tl-nav__block">
+			<input
+				class="tl-nav__range"
+				type="range"
+				min="0"
+				max={last}
+				step="1"
+				value={last}
+				aria-label="时间线位置"
+			/>
+			<div class="tl-nav__marks">
+				{items.map((it, i) => (
+					<span
+						class="tl-nav__mark"
+						data-era={it.era}
+						data-theme={it.theme}
+						style={`left: calc(10px + (100% - 20px) * ${i} / ${last})`}
+					>{it.label}</span>
+				))}
+			</div>
+			<div class="tl-nav__scenes">
+				{items.map((it) => (
+					<div class="tl-nav__scene" data-scene={it.era}>
+						<h4 class="tl-nav__title">{it.title}</h4>
 					</div>
-					<div class="tl-nav__scenes">
-						{g.timeline.map((it) => (
-							<div class="tl-nav__scene" data-scene={it.era}>
-								<h4 class="tl-nav__title">{it.title}</h4>
-							</div>
-						))}
-						<div class="tl-nav__scene" data-scene={g.timeline.length}>
-							<h4 class="tl-nav__title">完整档案</h4>
-						</div>
-					</div>
-				</div>
-			))}
+				))}
+			</div>
 		</div>
 	</div>
 </div>
-<script define:vars={{ locale }}>
+<script define:vars={{ locale, hasPageTimeline }}>
 	// 主题名（footer 同步显示）
 	const THEME_LABELS = {
 		zh: { modern: '现代', ancient: '古代' },
@@ -96,11 +86,12 @@ const { guests, locale = 'zh' } = Astro.props as { guests: TimelineGuest[]; loca
 		it: { modern: 'Moderno', ancient: 'Antico' },
 	};
 	const themeLabels = THEME_LABELS[locale] ?? THEME_LABELS.zh;
-	// 下拉开关：点击切换、外部点击关闭、Escape 关闭（与 NavGroupDropdown 同模式）
+
 	const toggle = document.getElementById('tl-nav-toggle');
 	const panel = document.getElementById('tl-nav-panel');
-	const guestBtns = panel ? Array.from(panel.querySelectorAll('.tl-nav__guest')) : [];
-	const blocks = panel ? Array.from(panel.querySelectorAll('.tl-nav__block')) : [];
+	const range = panel ? panel.querySelector('.tl-nav__range') : null;
+	const marks = panel ? Array.from(panel.querySelectorAll('.tl-nav__mark')) : [];
+	const scenes = panel ? Array.from(panel.querySelectorAll('.tl-nav__scene')) : [];
 
 	if (toggle && panel) {
 		toggle.addEventListener('click', (e) => {
@@ -110,7 +101,7 @@ const { guests, locale = 'zh' } = Astro.props as { guests: TimelineGuest[]; loca
 			if (!panel.hidden) fitPanelWidth();
 		});
 
-		// 捕获阶段：点击页面任意处（含其他下拉按钮）先关闭本卡片
+		// 捕获阶段：点击页面任意处先关闭本卡片
 		document.addEventListener(
 			'click',
 			(e) => {
@@ -121,7 +112,7 @@ const { guests, locale = 'zh' } = Astro.props as { guests: TimelineGuest[]; loca
 				) {
 					panel.hidden = true;
 					toggle.setAttribute('aria-expanded', 'false');
-				}
+			}
 			},
 			true
 		);
@@ -135,44 +126,12 @@ const { guests, locale = 'zh' } = Astro.props as { guests: TimelineGuest[]; loca
 		});
 	}
 
-	// 首尾刻度与滑块按钮对齐 + 卡片自适应：
-	// 首/末刻度居中时，其半宽可能超出锚点（10px），通过整体平移滑块行与刻度行
-	// （margin-left/right = 半宽 - 10）使文字中心与按钮中心对齐且不溢出卡片
-	function fitPanelWidth() {
-		if (!panel || panel.hidden) return;
-		let maxW = 0;
-		blocks.forEach((b) => {
-			if (!b.classList.contains('is-active')) return;
-			const marks = b.querySelectorAll('.tl-nav__mark');
-			const range = b.querySelector('.tl-nav__range');
-			const marksEl = b.querySelector('.tl-nav__marks');
-			if (!marks.length || !range || !marksEl) return;
-			marks.forEach((m) => { maxW = Math.max(maxW, m.offsetWidth); });
-			// 平移量：首/末刻度半宽超出锚点 10px 的部分
-			const ml = Math.max(0, marks[0].offsetWidth / 2 - 10);
-			const mr = Math.max(0, marks[marks.length - 1].offsetWidth / 2 - 10);
-			range.style.marginLeft = ml + 'px';
-			range.style.marginRight = mr + 'px';
-			range.style.width = 'calc(100% - ' + (ml + mr) + 'px)';
-			marksEl.style.marginLeft = ml + 'px';
-			marksEl.style.marginRight = mr + 'px';
-		});
-		// 卡片宽度兜底：包住最宽刻度（+ padding 40 + 余量）
-		if (maxW > 0) panel.style.minWidth = maxW + 44 + 'px';
-	}
-
-	// 滑块驱动场景显隐
-	function syncScenes(block) {
-		const range = block.querySelector('.tl-nav__range');
+	// 场景显隐（索引匹配）
+	function syncScenes() {
 		if (!range) return;
 		const v = Number(range.value);
-		block.querySelectorAll('.tl-nav__scene').forEach((s, i) => s.classList.toggle('is-active', i === v));
-		block.querySelectorAll('.tl-nav__mark').forEach((m) => m.classList.toggle('is-active', Number(m.dataset.era) === v));
-	}
-
-	// 滑块值 → 全局 data-era（正文分套；末档 = 完整档案）
-	function eraValue(range) {
-		return Number(range.value) === Number(range.max) ? 'full' : String(range.value);
+		scenes.forEach((s, i) => s.classList.toggle('is-active', i === v));
+		marks.forEach((m) => m.classList.toggle('is-active', Number(m.dataset.era) === v));
 	}
 
 	function syncFooterTheme(theme) {
@@ -180,52 +139,53 @@ const { guests, locale = 'zh' } = Astro.props as { guests: TimelineGuest[]; loca
 		if (el) el.textContent = theme === 'ancient' ? themeLabels.ancient : themeLabels.modern;
 	}
 
-	function applyEra(range, block) {
-		const v = eraValue(range);
+	function applyEra() {
+		if (!range) return;
+		const v = hasPageTimeline && Number(range.value) === Number(range.max) ? 'full' : String(range.value);
 		const root = document.documentElement;
 		root.setAttribute('data-era', v);
-		// 该时间点配置的主题（frontmatter timeline[].theme）→ 驱动全局主题与正文分套
-		if (v !== 'full') {
-			const mark = block.querySelector('.tl-nav__mark[data-era="' + v + '"]');
-			const theme = mark && mark.dataset.theme ? mark.dataset.theme : null;
-			if (theme) {
-				root.setAttribute('data-theme', theme);
-				syncFooterTheme(theme);
-			}
+		const mark = marks.find((m) => String(m.dataset.era) === v);
+		const theme = mark && mark.dataset.theme ? mark.dataset.theme : null;
+		if (theme) {
+			root.setAttribute('data-theme', theme);
+			syncFooterTheme(theme);
 		}
 	}
 
-	blocks.forEach((b) => {
-		const range = b.querySelector('.tl-nav__range');
-		if (range)
-			range.addEventListener('input', () => {
-				syncScenes(b);
-				applyEra(range, b);
-			});
-	});
-
-	// 茶客切换：重置到该茶客最后一个时间点（“现在”）
-	function switchGuest(i) {
-		guestBtns.forEach((b, j) => b.classList.toggle('is-active', j === i));
-		blocks.forEach((b, j) => b.classList.toggle('is-active', j === i));
-		const range = blocks[i] ? blocks[i].querySelector('.tl-nav__range') : null;
-		if (range) {
-			range.value = String(Number(range.max) - 1); // 停在“现在”
-			syncScenes(blocks[i]);
-			applyEra(range, blocks[i]);
+	// 首尾刻度与滑块按钮对齐：整体平移（半宽 - 10px）
+	function fitPanelWidth() {
+		if (!panel || panel.hidden || !range) return;
+		let maxW = 0;
+		marks.forEach((m) => { maxW = Math.max(maxW, m.offsetWidth); });
+		const ml = Math.max(0, (marks[0] ? marks[0].offsetWidth : 0) / 2 - 10);
+		const mr = Math.max(0, (marks.length ? marks[marks.length - 1].offsetWidth : 0) / 2 - 10);
+		const marksEl = panel.querySelector('.tl-nav__marks');
+		if (marksEl) {
+			marksEl.style.marginLeft = ml + 'px';
+			marksEl.style.marginRight = mr + 'px';
 		}
+		range.style.marginLeft = ml + 'px';
+		range.style.marginRight = mr + 'px';
+		range.style.width = 'calc(100% - ' + (ml + mr) + 'px)';
+		if (maxW > 0) panel.style.minWidth = maxW + 44 + 'px';
 	}
-	fitPanelWidth();
 
-	guestBtns.forEach((btn) => {
-		btn.addEventListener('click', () => switchGuest(Number(btn.dataset.guest)));
-	});
+	if (range) {
+		range.addEventListener('input', () => {
+			syncScenes();
+			applyEra();
+		});
+	}
 
-	if (blocks.length) switchGuest(0);
+	// 初始化：停在最后一个节点（“现在”）
+	if (range) {
+		syncScenes();
+		applyEra();
+	}
 	window.addEventListener('load', () => { if (panel && !panel.hidden) fitPanelWidth(); });
 </script>
 <style>
-	/* ===== 导航栏时间线：按钮（与 nav-group 同款） ===== */
+	/* ===== 导航栏时间线：按钮 ===== */
 	.tl-nav {
 		position: relative;
 		display: inline-flex;
@@ -273,7 +233,7 @@ const { guests, locale = 'zh' } = Astro.props as { guests: TimelineGuest[]; loca
 		top: calc(100% + 6px);
 		right: 0;
 		width: 460px;
-	max-width: calc(100vw - 32px); /* 窄屏兜底 */
+		max-width: calc(100vw - 32px); /* 窄屏兜底 */
 		background: var(--bg);
 		border: var(--line) solid var(--border);
 		z-index: 80;
@@ -308,46 +268,7 @@ const { guests, locale = 'zh' } = Astro.props as { guests: TimelineGuest[]; loca
 		color: var(--fg-muted);
 	}
 
-	/* 茶客切换 */
-	.tl-nav__guests {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 6px;
-		margin-bottom: 16px;
-	}
-
-	.tl-nav__guest {
-		padding: 5px 10px;
-		background: var(--bg-alt);
-		color: var(--fg-muted);
-		border: var(--line) solid var(--border);
-		border-radius: 0;
-		font: 600 11px/1 var(--font-mono);
-		letter-spacing: 0.1em;
-		cursor: pointer;
-		transition: background-color 0.15s ease, color 0.15s ease;
-	}
-
-	.tl-nav__guest:hover {
-		background: var(--fg);
-		color: var(--bg);
-	}
-
-	.tl-nav__guest.is-active {
-		background: var(--accent);
-		color: var(--bg);
-		border-color: var(--accent);
-	}
-
 	/* 滑块 / 刻度 / 场景 */
-	.tl-nav__block {
-		display: none;
-	}
-
-	.tl-nav__block.is-active {
-		display: block;
-	}
-
 	.tl-nav__range {
 		-webkit-appearance: none;
 		appearance: none;
@@ -436,10 +357,9 @@ const { guests, locale = 'zh' } = Astro.props as { guests: TimelineGuest[]; loca
 	}
 
 	.tl-nav__title {
-		margin: 0 0 6px;
+		margin: 0;
 		font-size: 15px;
 		font-weight: 800;
 		letter-spacing: 0.02em;
 	}
-
 </style>

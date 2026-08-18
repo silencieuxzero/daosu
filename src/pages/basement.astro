@@ -1,0 +1,545 @@
+---
+// ============================================================
+// 地下室（隐藏页）：不在任何导航里，只有集齐口令才能打开
+// 口令：不忘凉茶（前半在谜题间·旧账本，后半在谜题间·后院）
+// 外门为四格密码转盘（DialLock），另附键盘输入兜底
+// 门后：木箱 → 相册复原（按时间排序）→ 内门数字转盘（页码连成密码）→ 通关
+// 解锁状态：daosu.puzzle.basement.v2；门后进度：daosu.puzzle.cellar.v2
+// ============================================================
+import Layout from '../layouts/Layout.astro';
+import DialLock from '../components/DialLock.astro';
+import AlbumSort from '../components/AlbumSort.astro';
+import { createMarkdownProcessor } from '@astrojs/markdown-remark';
+import remarkSpoiler from '../lib/remark-spoiler.mjs';
+
+const processor = await createMarkdownProcessor({
+	remarkPlugins: [remarkSpoiler],
+	syntaxHighlight: false,
+});
+const md = (t: string) => processor.render(t).then((r) => r.code);
+
+// ---------- 外门转盘（口令：不忘凉茶） ----------
+const dials = [
+	['不', '别', '勿', '莫'],
+	['忘', '记', '念', '思'],
+	['凉', '冷', '温', '热'],
+	['茶', '酒', '水', '汤'],
+];
+const solution = ['不', '忘', '凉', '茶'];
+
+// ---------- 门后：木箱 ----------
+const boxLook = await md('靠墙放着一只木箱。箱盖上的铜锁早就锈死了，但锁眼里插着一把钥匙，像是有人故意留的。');
+const boxOpen = await md('你拔出钥匙，捅进锁眼，咔哒一声——锁开了。\n\n箱子里是一本相册，但被人撕散了：四张照片散落在地，页码也乱了。你捡起来，想要按时间重新排好。');
+
+// ---------- 相册复原：四张照片按时间排序 → 页码连成内门密码 ----------
+// 正确顺序：实验室 → 千年流浪 → 悼溯茶馆 → 地下室（页码 2-4-1-3）
+const albumPhotos = [
+	{ num: '2', line: '实验体 X-430 从培养舱里爬出来，一脚踏进了千年前。' },
+	{ num: '4', line: '被当作妖物的年月，从一个个朝代间流浪。' },
+	{ num: '1', line: '住进悼溯茶馆，靠窗的位置，茶永远温着。' },
+	{ num: '3', line: '地下室的门，被一个集齐口令的茶客敲开。' },
+];
+
+// ---------- 内门数字转盘（密码 = 相册页码按时间连起来） ----------
+const digitDials = [
+	['1', '2', '3', '4'],
+	['1', '2', '3', '4'],
+	['1', '2', '3', '4'],
+	['1', '2', '3', '4'],
+];
+const innerSolution = ['2', '4', '1', '3'];
+const innerHint = '密码是四个数字：相册的页码，按排好的顺序连起来。';
+
+// ---------- 通关文本 ----------
+const doneHtml = await md(`内门后面还有一间小屋，比外间更安静。
+
+墙上钉着一张纸条：
+
+%%给每一个还愿意敲门的人。%%
+
+纸条下面压着一页相纸，字迹淡得几乎看不见：
+
+%%「下一个」。%%
+
+墙角的茶台上放着一壶凉茶，还温着。茶壶底下压着一张纸条，只有两个字：
+
+**不忘。**
+
+你退出来，楼梯口的光照进来。身后的门自己合上了，咔哒一声。
+
+门口落款：琈予。
+
+[← 回到谜题间](/puzzle-room) · [去看看茶客名单 →](/guests/)`);
+---
+
+<Layout title={`门后 · ${'悼溯茶馆'}`}>
+	<main class="page">
+		<article>
+			<header class="page-head">
+				<p class="kicker">地下室</p>
+				<h1>门后</h1>
+			</header>
+
+			<!-- ===== 外门锁 ===== -->
+			<div data-lock>
+				<p class="lock__intro">
+					这扇门不在任何地图上。如果你走到了这里，说明你至少听说过它的口令——
+					前半段从旧账本里来，后半段从后院来。
+				</p>
+
+				<DialLock lockId="basement" dials={dials} solution={solution} />
+
+				<details class="lock__typed">
+					<summary>懒得拨转盘？用键盘输入</summary>
+					<div class="lock__form">
+						<input
+							class="lock__input"
+							data-role="lock-input"
+							type="text"
+							placeholder="请输入口令"
+							autocomplete="off"
+							spellcheck="false"
+							aria-label="口令"
+						/>
+						<button class="lock__submit" data-role="lock-submit" type="button">开锁</button>
+					</div>
+					<p class="lock__feedback" data-role="lock-feedback" role="status"></p>
+				</details>
+			</div>
+
+			<!-- ===== 门后 ===== -->
+			<div data-role="cellar" hidden>
+				<p class="cellar__intro">
+					门开了。地下室比想象中暖和，空气里有一股旧木头的味道。
+					地下室不大：一只木箱、一扇内门。
+				</p>
+
+				<!-- 木箱 -->
+				<section
+					class="box"
+					data-role="box"
+					data-look={boxLook}
+					data-open={boxOpen}
+					aria-label="木箱"
+				>
+					<header class="box__head">
+						<span class="box__tag">木箱 · BOX</span>
+					</header>
+					<div class="box__log" data-role="box-log"></div>
+					<div class="box__actions">
+						<button class="box__btn" data-role="box-look" type="button">查看木箱</button>
+						<button class="box__btn" data-role="box-open" type="button" disabled>
+							拔钥匙，开箱
+						</button>
+					</div>
+				</section>
+
+				<!-- 相册复原 -->
+				<div data-role="album-wrap" hidden>
+					<AlbumSort
+						sortId="album"
+						photos={albumPhotos}
+						tipText="点两张照片交换位置，按时间排好。"
+						wrongText="页码对不上。再想想——哪张照片最先发生？"
+						solvedText="咔哒。相册合上了——按时间排好的页码连起来，就是内门的密码。"
+					/>
+				</div>
+
+				<!-- 内门 -->
+				<section class="inner" data-role="inner" hidden aria-label="内门">
+					<header class="inner__head">
+						<span class="inner__tag">内门 · INNER DOOR</span>
+					</header>
+					<p class="inner__desc">木箱底下还有一扇内门，锁着四个数字格。</p>
+					<DialLock lockId="inner" dials={digitDials} solution={innerSolution} hintText={innerHint} />
+				</section>
+
+				<!-- 通关 -->
+				<section class="done" data-role="done" hidden aria-label="通关">
+					<div class="done__inner prose" set:html={doneHtml} />
+				</section>
+			</div>
+		</article>
+	</main>
+</Layout>
+
+<style>
+	.page {
+		padding: clamp(40px, 6vh, 72px) clamp(16px, 4vw, 48px);
+		max-width: 720px;
+		margin: 0 auto;
+	}
+
+	.page-head {
+		position: relative;
+		padding-bottom: 26px;
+		margin-bottom: 10px;
+		border-bottom: var(--line) solid var(--border);
+		background-color: var(--bg);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+	}
+
+	.page-head h1 {
+		margin-top: 14px;
+		font-size: clamp(28px, 4.5vw, 42px);
+		font-weight: 900;
+	}
+
+	/* ===== 外门锁 ===== */
+	.lock__intro {
+		margin: clamp(28px, 4vh, 44px) 0 16px;
+		font-size: 14px;
+		line-height: 2;
+	}
+
+	.lock__typed {
+		margin-top: 16px;
+		border: 1px solid var(--grid-line);
+		padding: 12px 16px;
+	}
+
+	.lock__typed summary {
+		cursor: pointer;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.1em;
+		color: var(--fg-muted);
+		user-select: none;
+	}
+
+	.lock__typed summary:hover {
+		color: var(--accent);
+	}
+
+	.lock__form {
+		margin-top: 12px;
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+
+	.lock__input {
+		flex: 1;
+		min-width: 200px;
+		padding: 12px 14px;
+		background: var(--bg);
+		color: var(--fg);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		font: 500 15px/1 var(--font-sans);
+		outline: none;
+		transition: border-color 0.15s ease;
+	}
+
+	.lock__input:focus {
+		border-color: var(--accent);
+	}
+
+	.lock__submit {
+		padding: 12px 22px;
+		background: var(--fg);
+		color: var(--bg);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		font: 700 12px/1 var(--font-mono);
+		letter-spacing: 0.14em;
+		cursor: pointer;
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+
+	.lock__submit:hover {
+		background: var(--accent);
+		color: var(--bg);
+		border-color: var(--accent);
+	}
+
+	.lock__feedback {
+		margin: 12px 0 0;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.06em;
+		color: var(--fg-muted);
+		min-height: 1em;
+	}
+
+	.lock__feedback.is-error {
+		color: var(--accent);
+	}
+
+	/* ===== 门后 ===== */
+	[data-role='cellar'][hidden] {
+		display: none;
+	}
+
+	.cellar__intro {
+		margin: clamp(28px, 4vh, 44px) 0 0;
+		font-size: 14px;
+		line-height: 2;
+	}
+
+	/* 木箱 */
+	.box {
+		margin-top: clamp(28px, 4vh, 44px);
+		border: var(--line) solid var(--border);
+		padding: 18px 20px 20px;
+	}
+
+	.box__head {
+		margin-bottom: 12px;
+	}
+
+	.box__tag,
+	.inner__tag {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.16em;
+		color: var(--accent);
+	}
+
+	.box__log {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		margin-bottom: 14px;
+	}
+
+	.box__entry {
+		border: 1px solid var(--grid-line);
+		border-left: 4px solid var(--accent);
+		padding: 10px 14px;
+		background-color: var(--bg-alt);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+	}
+
+	.box__entry-text {
+		margin: 0;
+		font-size: 14px;
+		line-height: 2;
+		min-height: 1em;
+	}
+
+	.box__actions {
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+
+	.box__btn {
+		padding: 11px 18px;
+		background: var(--fg);
+		color: var(--bg);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		font: 700 12px/1 var(--font-mono);
+		letter-spacing: 0.14em;
+		cursor: pointer;
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+
+	.box__btn:hover:not(:disabled) {
+		background: var(--accent);
+		color: var(--bg);
+		border-color: var(--accent);
+	}
+
+	.box__btn:disabled {
+		opacity: 0.45;
+		cursor: default;
+	}
+
+	/* 内门 */
+	.inner {
+		margin-top: clamp(28px, 4vh, 44px);
+	}
+
+	.inner__head {
+		margin-bottom: 10px;
+	}
+
+	.inner__desc {
+		margin: 0 0 14px;
+		font-size: 14px;
+		line-height: 2;
+	}
+
+	/* 通关 */
+	.done {
+		margin-top: clamp(28px, 4vh, 44px);
+		padding: clamp(20px, 3vw, 32px);
+		border: var(--line) solid var(--border);
+		background-color: var(--bg-alt);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+	}
+
+	.done[hidden] {
+		display: none;
+	}
+
+	.done__inner {
+		font-size: 15px;
+	}
+</style>
+
+<script>
+	import { collapse, storageKey, loadFlag, loadMap, typewrite } from '../lib/puzzle';
+
+	const KEY = storageKey('basement'); // 外门是否已开
+	const CELLAR = storageKey('cellar'); // 门后进度：{ box, album, inner }
+	const cellarEl = document.querySelector<HTMLElement>('[data-role="cellar"]');
+	const lockWrap = document.querySelector<HTMLElement>('[data-lock]');
+
+	const readCellar = () => loadMap(CELLAR);
+	const saveCellar = (m: Record<string, number>) => {
+		try {
+			localStorage.setItem(CELLAR, JSON.stringify(m));
+		} catch {
+			/* ignore */
+		}
+	};
+
+	const boxLookEl = document.querySelector<HTMLButtonElement>('[data-role="box-look"]');
+	const boxOpenEl = document.querySelector<HTMLButtonElement>('[data-role="box-open"]');
+	const boxLogEl = document.querySelector<HTMLElement>('[data-role="box-log"]');
+	const albumWrapEl = document.querySelector<HTMLElement>('[data-role="album-wrap"]');
+	const innerEl = document.querySelector<HTMLElement>('[data-role="inner"]');
+	const doneEl = document.querySelector<HTMLElement>('[data-role="done"]');
+	const boxHtml = document.querySelector<HTMLElement>('[data-role="box"]')?.dataset ?? {};
+	const boxLookHtml = boxHtml.look ?? '';
+	const boxOpenHtml = boxHtml.open ?? '';
+
+	const boxEntry = (html: string, typed: boolean) => {
+		if (!boxLogEl) return;
+		const entry = document.createElement('div');
+		entry.className = 'box__entry';
+		const text = document.createElement('p');
+		text.className = 'box__entry-text';
+		const tmp = document.createElement('div');
+		tmp.innerHTML = html;
+		const plain = tmp.textContent ?? '';
+		entry.appendChild(text);
+		boxLogEl.appendChild(entry);
+		if (typed) {
+			const finish = typewrite(text, plain, 24);
+			text.addEventListener('click', () => finish(), { once: true });
+		} else {
+			text.textContent = plain;
+		}
+	};
+
+	const boxDone = () => {
+		if (boxLookEl) boxLookEl.disabled = true;
+		if (boxOpenEl) boxOpenEl.disabled = true;
+		if (albumWrapEl) albumWrapEl.hidden = false;
+	};
+
+	// ===== 外门解锁：显示门后 =====
+	const unlocked = () => {
+		try {
+			localStorage.setItem(KEY, '1');
+		} catch {
+			/* ignore */
+		}
+		if (lockWrap) lockWrap.hidden = true;
+		if (cellarEl) cellarEl.hidden = false;
+
+		// 恢复门后进度
+		const m = readCellar();
+		if ((m.box ?? 0) >= 2) {
+			boxEntry(boxLookHtml, false);
+			boxEntry(boxOpenHtml, false);
+			boxDone();
+			if (m.album === 1 && innerEl) innerEl.hidden = false;
+			if (m.inner === 1 && doneEl) doneEl.hidden = false;
+		}
+	};
+
+	// ===== 木箱 =====
+	if (boxLookEl) {
+		boxLookEl.addEventListener('click', () => {
+			const m = readCellar();
+			m.box = Math.max(m.box ?? 0, 1);
+			saveCellar(m);
+			boxLookEl.disabled = true;
+			boxEntry(boxLookHtml, true);
+			if (boxOpenEl) boxOpenEl.disabled = false;
+		});
+	}
+	if (boxOpenEl) {
+		boxOpenEl.addEventListener('click', () => {
+			const m = readCellar();
+			m.box = 2;
+			saveCellar(m);
+			boxOpenEl.disabled = true;
+			boxEntry(boxOpenHtml, true);
+			boxDone();
+		});
+	}
+
+	// ===== 相册排好 → 内门 =====
+	window.addEventListener('daosu:puzzle-update', (e) => {
+		const d = (e as CustomEvent).detail;
+		if (!d) return;
+		if (d.kind === 'album' && d.id === 'album' && d.solved === 1) {
+			const m = readCellar();
+			m.album = 1;
+			saveCellar(m);
+			if (innerEl) innerEl.hidden = false;
+			if (innerEl) innerEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		}
+		if (d.kind === 'lock' && d.id === 'inner' && d.solved === 1) {
+			const m = readCellar();
+			m.inner = 1;
+			saveCellar(m);
+			if (doneEl) doneEl.hidden = false;
+			if (doneEl) doneEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		}
+		if (d.kind === 'lock' && d.id === 'basement' && d.solved === 1) {
+			unlocked();
+		}
+	});
+
+	if (cellarEl) {
+		if (loadFlag(KEY)) {
+			unlocked();
+		} else {
+			// 键盘输入兜底
+			const inputEl = document.querySelector<HTMLInputElement>('[data-role="lock-input"]');
+			const submitEl = document.querySelector<HTMLElement>('[data-role="lock-submit"]');
+			const feedbackEl = document.querySelector<HTMLElement>('[data-role="lock-feedback"]');
+
+			const check = () => {
+				if (!inputEl) return;
+				const v = collapse(inputEl.value);
+				if (!v) {
+					if (feedbackEl) {
+						feedbackEl.textContent = '门锁着。请输入口令。';
+						feedbackEl.classList.remove('is-error');
+					}
+					return;
+				}
+				if (
+					v === '不忘凉茶' ||
+					(v.includes('不忘') && (v.includes('凉茶') || v.includes('涼茶')))
+				) {
+					unlocked();
+					return;
+				}
+				if (feedbackEl) {
+					feedbackEl.textContent = '口令不对。锁纹丝不动。';
+					feedbackEl.classList.add('is-error');
+				}
+			};
+
+			if (submitEl) submitEl.addEventListener('click', check);
+			if (inputEl) {
+				inputEl.addEventListener('keydown', (e) => {
+					if (e.key === 'Enter') check();
+				});
+			}
+		}
+	}
+</script>

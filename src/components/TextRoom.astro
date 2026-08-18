@@ -1,0 +1,515 @@
+---
+// ============================================================
+// 文字密室：自由探索的文字房间（无图片依赖）
+// 输入命令（如「查看木箱」）或点按钮探索物件；物件可自由选择顺序，
+// 每个物件内部按步骤推进；require 可设置前置物件；exit 物件需其余全部完成
+// 全部物件完成（含出口）后显示通关文本
+// - roomId: 进度存储键（daosu.puzzle.<roomId>.v2，localStorage 持久化）
+// ============================================================
+interface RoomObject {
+	id: string;
+	label: string;
+	keywords: string[];
+	steps: string[]; // 每步的 markdown 渲染 HTML
+	require?: string; // 需先完成（steps 全部推进完）的物件 id
+	exit?: boolean; // 出口物件：需其余所有物件完成才可触发
+}
+
+const {
+	roomId,
+	introHtml,
+	objects,
+	completionHtml,
+	fallbackText,
+	blockedText,
+	exitBlockedText,
+	doneText,
+} = Astro.props as {
+	roomId: string;
+	introHtml?: string;
+	objects: RoomObject[];
+	completionHtml?: string;
+	fallbackText?: string;
+	blockedText?: string;
+	exitBlockedText?: string;
+	doneText?: string;
+};
+
+const serialized = JSON.stringify(
+	objects.map((o) => ({
+		id: o.id,
+		label: o.label,
+		keywords: o.keywords,
+		steps: o.steps,
+		require: o.require ?? '',
+		exit: o.exit ?? false,
+	}))
+);
+const texts = JSON.stringify({
+	fallback: fallbackText ?? '',
+	blocked: blockedText ?? '',
+	exitBlocked: exitBlockedText ?? '',
+	done: doneText ?? '',
+});
+---
+
+<section class="room" data-room data-room-id={roomId} data-objects={serialized} data-texts={texts} aria-label="文字密室">
+	<header class="room__head">
+		<span class="room__tag">密室 · TEXT ROOM</span>
+		<span class="room__progress" data-role="progress">0 / {objects.length}</span>
+	</header>
+
+	{introHtml && <div class="room__intro" set:html={introHtml} />}
+
+	<div class="room__log" data-role="log" aria-live="polite"></div>
+
+	<form class="room__cmd" data-role="cmd">
+		<input
+			class="room__input"
+			data-role="input"
+			type="text"
+			placeholder={`输入命令，如：查看${objects[0]?.label ?? ''}`}
+			autocomplete="off"
+			spellcheck="false"
+			aria-label="探索命令"
+		/>
+		<button class="room__go" data-role="go" type="submit">查看</button>
+	</form>
+
+	<div class="room__quick">
+		{
+			objects.map((o, i) => (
+				<button class="room__quick-btn" data-role="quick" data-object={i} type="button">
+					{o.label}
+				</button>
+			))
+		}
+	</div>
+
+	<p class="room__feedback" data-role="feedback" role="status"></p>
+
+	<div class="room__actions">
+		<button class="room__reset" data-role="reset" type="button">重新来过</button>
+	</div>
+
+	<div class="room__done" data-role="done" hidden>
+		<div class="room__done-inner" set:html={completionHtml} />
+	</div>
+</section>
+
+<style>
+	.room {
+		margin-top: clamp(28px, 4vh, 44px);
+		border: var(--line) solid var(--border);
+		padding: 18px 20px 20px;
+	}
+
+	.room__head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 12px;
+		flex-wrap: wrap;
+		margin-bottom: 14px;
+	}
+
+	.room__tag {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.14em;
+		color: var(--accent);
+	}
+
+	.room__progress {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.14em;
+		color: var(--fg-muted);
+	}
+
+	.room__intro {
+		font-size: 14px;
+		line-height: 2;
+		margin-bottom: 14px;
+	}
+
+	.room__intro p {
+		margin: 0;
+	}
+
+	/* ===== 探索记录 ===== */
+	.room__log {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		margin-bottom: 14px;
+	}
+
+	.room__entry {
+		border: 1px solid var(--grid-line);
+		border-left: 4px solid var(--accent);
+		padding: 10px 14px;
+		background-color: var(--bg-alt);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+	}
+
+	.room__entry-label {
+		display: block;
+		margin-bottom: 6px;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.16em;
+		color: var(--accent);
+	}
+
+	.room__entry-text {
+		margin: 0;
+		font-size: 14px;
+		line-height: 2;
+		min-height: 1em;
+	}
+
+	/* ===== 命令 ===== */
+	.room__cmd {
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+
+	.room__input {
+		flex: 1;
+		min-width: 200px;
+		padding: 12px 14px;
+		background: var(--bg);
+		color: var(--fg);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		font: 500 14px/1 var(--font-sans);
+		outline: none;
+		transition: border-color 0.15s ease;
+	}
+
+	.room__input:focus {
+		border-color: var(--accent);
+	}
+
+	.room__go {
+		padding: 12px 20px;
+		background: var(--fg);
+		color: var(--bg);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		font: 700 12px/1 var(--font-mono);
+		letter-spacing: 0.14em;
+		cursor: pointer;
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+
+	.room__go:hover {
+		background: var(--accent);
+		color: var(--bg);
+		border-color: var(--accent);
+	}
+
+	.room__quick {
+		margin-top: 10px;
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+
+	.room__quick-btn {
+		padding: 8px 14px;
+		background: transparent;
+		color: var(--fg);
+		border: 1px solid var(--grid-line);
+		border-radius: 0;
+		font: 700 12px/1 var(--font-sans);
+		cursor: pointer;
+		transition: color 0.15s ease, border-color 0.15s ease;
+	}
+
+	.room__quick-btn:hover {
+		color: var(--accent);
+		border-color: var(--accent);
+	}
+
+	.room__quick-btn.is-done {
+		color: var(--fg-muted);
+		text-decoration: line-through;
+		text-decoration-color: var(--fg-muted);
+	}
+
+	/* ===== 反馈 / 操作 ===== */
+	.room__feedback {
+		margin: 12px 0 0;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.06em;
+		color: var(--fg-muted);
+		min-height: 1em;
+	}
+
+	.room__feedback.is-error {
+		color: var(--accent);
+	}
+
+	.room__actions {
+		margin-top: 14px;
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+
+	.room__reset {
+		padding: 9px 16px;
+		background: transparent;
+		color: var(--fg-muted);
+		border: 1px solid var(--grid-line);
+		border-radius: 0;
+		font: 700 11px/1 var(--font-mono);
+		letter-spacing: 0.12em;
+		cursor: pointer;
+		transition: color 0.15s ease, border-color 0.15s ease;
+	}
+
+	.room__reset:hover {
+		color: var(--accent);
+		border-color: var(--accent);
+	}
+
+	/* ===== 通关 ===== */
+	.room__done {
+		margin-top: 16px;
+		padding: 16px 18px;
+		border: var(--line) dashed var(--accent);
+		background-color: var(--bg-alt);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+	}
+
+	.room__done[hidden] {
+		display: none;
+	}
+
+	.room__done-inner {
+		font-size: 14px;
+		line-height: 2;
+		min-height: 1em;
+	}
+
+	.room__done-inner p {
+		margin: 0 0 0.6em;
+	}
+
+	.room__done-inner p:last-child {
+		margin-bottom: 0;
+	}
+</style>
+
+<script>
+	import { storageKey, loadMap, typewrite, findCommand } from '../lib/puzzle';
+
+	document.querySelectorAll<HTMLElement>('.room').forEach((section) => {
+		const roomId = section.dataset.roomId ?? '';
+		const objects = JSON.parse(section.dataset.objects ?? '[]') as {
+			id: string;
+			label: string;
+			keywords: string[];
+			steps: string[];
+			require: string;
+			exit: boolean;
+		}[];
+		if (!roomId || !Array.isArray(objects) || objects.length === 0) return;
+
+		const key = storageKey(roomId);
+		const texts = JSON.parse(section.dataset.texts ?? '{}') as {
+			fallback?: string;
+			blocked?: string;
+			exitBlocked?: string;
+			done?: string;
+		};
+		const logEl = section.querySelector<HTMLElement>('[data-role="log"]');
+		const progressEl = section.querySelector<HTMLElement>('[data-role="progress"]');
+		const inputEl = section.querySelector<HTMLInputElement>('[data-role="input"]');
+		const cmdForm = section.querySelector<HTMLElement>('[data-role="cmd"]');
+		const feedbackEl = section.querySelector<HTMLElement>('[data-role="feedback"]');
+		const doneEl = section.querySelector<HTMLElement>('[data-role="done"]');
+		const resetEl = section.querySelector<HTMLElement>('[data-role="reset"]');
+		const quickBtns = Array.from(section.querySelectorAll<HTMLButtonElement>('[data-role="quick"]'));
+
+		// 进度：物件 id → 已推进步数
+		let progress = loadMap(key);
+		const validIds = objects.map((o) => o.id);
+		for (const id of Object.keys(progress)) {
+			if (!validIds.includes(id)) delete progress[id];
+		}
+
+		const stepsOf = (o: (typeof objects)[number]) => progress[o.id] ?? 0;
+		const isDone = (o: (typeof objects)[number]) => stepsOf(o) >= o.steps.length;
+		const doneCount = () => objects.filter(isDone).length;
+
+		// 出口物件之外的全部完成
+		const othersDone = (exitObj: (typeof objects)[number]) =>
+			objects.filter((o) => !o.exit && o !== exitObj).every(isDone);
+
+		const persist = () => {
+			try {
+				localStorage.setItem(key, JSON.stringify(progress));
+			} catch {
+				/* ignore */
+			}
+		};
+
+		const appendEntry = (label: string, html: string, typed: boolean) => {
+			if (!logEl) return;
+			const entry = document.createElement('div');
+			entry.className = 'room__entry';
+			const l = document.createElement('span');
+			l.className = 'room__entry-label';
+			l.textContent = label;
+			const text = document.createElement('p');
+			text.className = 'room__entry-text';
+			const tmp = document.createElement('div');
+			tmp.innerHTML = html;
+			const plain = tmp.textContent ?? '';
+			entry.append(l, text);
+			logEl.appendChild(entry);
+			if (typed) {
+				const finish = typewrite(text, plain, 22);
+				text.addEventListener('click', () => finish(), { once: true });
+			} else {
+				text.textContent = plain;
+			}
+		};
+
+		const refresh = () => {
+			// 回放已推进的步骤（不重播打字机）
+			objects.forEach((o) => {
+				const n = stepsOf(o);
+				for (let s = 0; s < n; s++) {
+					appendEntry(o.label, o.steps[s], false);
+				}
+				const btn = quickBtns[objects.indexOf(o)];
+				if (btn && isDone(o)) btn.classList.add('is-done');
+			});
+			if (progressEl) progressEl.textContent = `${doneCount()} / ${objects.length}`;
+			if (doneEl) doneEl.hidden = doneCount() !== objects.length;
+			if (doneEl && doneCount() === objects.length) {
+				const inner = doneEl.querySelector<HTMLElement>('.room__done-inner');
+				if (inner && !doneEl.dataset.typed) {
+					doneEl.dataset.typed = '1';
+					const plain = inner.textContent ?? '';
+					inner.textContent = '';
+					const finish = typewrite(inner, plain, 28);
+					inner.addEventListener('click', () => finish(), { once: true });
+				}
+			}
+		};
+
+		const act = (i: number) => {
+			const o = objects[i];
+			if (!o) return;
+			const done = isDone(o);
+			const n = stepsOf(o);
+			if (done) {
+				if (feedbackEl) {
+					feedbackEl.textContent = texts.done ?? '你已经看过了。';
+					feedbackEl.classList.remove('is-error');
+				}
+				return;
+			}
+			// 前置物件未完成
+			if (o.require && !isDone(objects.find((x) => x.id === o.require)!)) {
+				if (feedbackEl) {
+					feedbackEl.textContent = texts.blocked ?? '还打不开。或许该先看看别处。';
+					feedbackEl.classList.add('is-error');
+				}
+				return;
+			}
+			// 出口物件：需其余全部完成
+			if (o.exit && !othersDone(o)) {
+				if (feedbackEl) {
+					feedbackEl.textContent = texts.exitBlocked ?? '门纹丝不动——像是要你先把这间屋子看遍。';
+					feedbackEl.classList.add('is-error');
+				}
+				return;
+			}
+			progress[o.id] = n + 1;
+			persist();
+			appendEntry(o.label, o.steps[n], true);
+			if (feedbackEl) {
+				feedbackEl.textContent = '';
+				feedbackEl.classList.remove('is-error');
+			}
+			const btn = quickBtns[i];
+			if (btn && isDone(o)) btn.classList.add('is-done');
+			if (progressEl) progressEl.textContent = `${doneCount()} / ${objects.length}`;
+			if (doneEl) {
+				if (doneCount() === objects.length) {
+					doneEl.hidden = false;
+					const inner = doneEl.querySelector<HTMLElement>('.room__done-inner');
+					if (inner) {
+						const plain = inner.textContent ?? '';
+						inner.textContent = '';
+						const finish = typewrite(inner, plain, 28);
+						inner.addEventListener('click', () => finish(), { once: true });
+					}
+				}
+			}
+		};
+
+		const runCommand = (v: string) => {
+			const i = findCommand(v, objects);
+			if (i === -1) {
+				if (feedbackEl) {
+					feedbackEl.textContent =
+						texts.fallback ?? '这里没有那样东西。你环顾四周，记下每一样物件。';
+					feedbackEl.classList.add('is-error');
+				}
+				return;
+			}
+			act(i);
+		};
+
+		if (cmdForm) {
+			cmdForm.addEventListener('submit', (e) => {
+				e.preventDefault();
+				if (!inputEl) return;
+				runCommand(inputEl.value);
+				inputEl.value = '';
+			});
+		}
+
+		quickBtns.forEach((btn) => {
+			btn.addEventListener('click', () => act(Number(btn.dataset.object)));
+		});
+
+		if (resetEl) {
+			resetEl.addEventListener('click', () => {
+				progress = {};
+				try {
+					localStorage.removeItem(key);
+				} catch {
+					/* ignore */
+				}
+				if (logEl) logEl.innerHTML = '';
+				quickBtns.forEach((btn) => btn.classList.remove('is-done'));
+				if (doneEl) {
+					doneEl.hidden = true;
+					delete doneEl.dataset.typed;
+				}
+				if (feedbackEl) {
+					feedbackEl.textContent = '';
+					feedbackEl.classList.remove('is-error');
+				}
+				if (progressEl) progressEl.textContent = `0 / ${objects.length}`;
+			});
+		}
+
+		refresh();
+	});
+</script>

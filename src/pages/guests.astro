@@ -14,6 +14,9 @@ const hasAncient = guests.some((g) => g.ancient);
 // 两套列表（古代缺省回退现代版）
 const modernList = guests.map((p) => entryFor(p, 'modern')).filter(isDefined);
 const ancientList = guests.map((p) => entryFor(p, 'ancient')).filter(isDefined);
+
+// 隐藏茶客（谜题彩蛋）：未解锁时列表只显示占位卡，解锁后显示真实档案
+const hiddenCount = modernList.filter((g) => g.data.hidden).length;
 ---
 
 <Layout title={`茶客设定 · ${config.site.name}`}>
@@ -24,7 +27,7 @@ const ancientList = guests.map((p) => entryFor(p, 'ancient')).filter(isDefined);
 			<h1>茶客设定</h1>
 			<p class="sec-head__desc">
 				出入茶馆的茶客们——他们的名字、来历与随身之物。已登记
-				{guests.length} 位，点击卡片查看档案。
+				<span data-role="guest-count" data-total={guests.length}>{guests.length - hiddenCount}</span> 位，点击卡片查看档案。
 			</p>
 		</header>
 
@@ -35,56 +38,64 @@ const ancientList = guests.map((p) => entryFor(p, 'ancient')).filter(isDefined);
 		<div data-split={hasAncient ? 'modern' : undefined}>
 			<section class="guest-grid" aria-label="茶客列表">
 				{
-					modernList.map((guest, i) => (
-						<article class="guest-card">
-							<a class="guest-card__link" href={`/guests/${pairKeyOf(guest.id)}/`}>
-								<div class="guest-card__img">
-									{
-										guest.data.portrait ? (
-											<img
-												src={guest.data.portrait}
-												alt={`${guest.data.name}的立绘`}
-												loading="lazy"
-											/>
-										) : (
-											<span class="guest-card__placeholder" aria-hidden="true">
-												{guest.data.name.charAt(0)}
-											</span>
-										)
-									}
-								</div>
-								<div class="guest-card__body">
-									<p class="guest-card__idx">NO.{String(i + 1).padStart(2, '0')}</p>
-									<h2 class="guest-card__name">{guest.data.name}</h2>
-									{
-										guest.data.description && (
-											<p class="guest-card__desc">{guest.data.description}</p>
-										)
-									}
-									<p class="guest-card__meta">
-										{guest.data.identity} ·{' '}
-										<span
-											class="guest-card__status"
-											data-status={guest.data.status}
-											style={statusTextStyle(String(guest.data.status ?? ''))}
-										>
-											{guest.data.status}
-										</span>
-									</p>
-								</div>
-							</a>
-						</article>
-					))
-				}
-			</section>
-		</div>
-
-		<!-- ===== 茶客卡片网格（古代主题，无 .ancient 变体时回退共用现代版） ===== -->
-		{hasAncient && (
-			<div data-split="ancient">
-				<section class="guest-grid" aria-label="茶客列表">
-					{
-						ancientList.map((guest, i) => (
+					modernList.map((guest, i) =>
+						guest.data.hidden ? (
+							<>
+								{/* 未解锁：占位卡（点击去谜题间） */}
+								<article class="guest-card guest-card--locked" data-locked-placeholder>
+									<a class="guest-card__link" href="/puzzle-room/">
+										<div class="guest-card__img">
+											<span class="guest-card__placeholder">？</span>
+										</div>
+										<div class="guest-card__body">
+											<p class="guest-card__idx">NO.{String(i + 1).padStart(2, '0')}</p>
+											<h2 class="guest-card__name">？？？</h2>
+											<p class="guest-card__desc">尚未遇见。集齐地下室的口令后，Ta 会出现在这里。</p>
+											<p class="guest-card__meta">？？？ · ？？？</p>
+										</div>
+									</a>
+								</article>
+								{/* 已解锁：真实档案卡 */}
+								<article class="guest-card" data-locked-guest hidden>
+									<a class="guest-card__link" href={`/guests/${pairKeyOf(guest.id)}/`}>
+										<div class="guest-card__img">
+											{
+												guest.data.portrait ? (
+													<img
+														src={guest.data.portrait}
+														alt={`${guest.data.name}的立绘`}
+														loading="lazy"
+													/>
+												) : (
+													<span class="guest-card__placeholder" aria-hidden="true">
+														{guest.data.name.charAt(0)}
+													</span>
+												)
+											}
+										</div>
+										<div class="guest-card__body">
+											<p class="guest-card__idx">NO.{String(i + 1).padStart(2, '0')}</p>
+											<h2 class="guest-card__name">{guest.data.name}</h2>
+											{
+												guest.data.description && (
+													<p class="guest-card__desc">{guest.data.description}</p>
+												)
+											}
+											<p class="guest-card__meta">
+												{guest.data.identity} ·{' '}
+												<span
+													class="guest-card__status"
+													data-status={guest.data.status}
+													style={statusTextStyle(String(guest.data.status ?? ''))}
+												>
+													{guest.data.status}
+												</span>
+											</p>
+										</div>
+									</a>
+								</article>
+							</>
+						) : (
 							<article class="guest-card">
 								<a class="guest-card__link" href={`/guests/${pairKeyOf(guest.id)}/`}>
 									<div class="guest-card__img">
@@ -123,7 +134,113 @@ const ancientList = guests.map((p) => entryFor(p, 'ancient')).filter(isDefined);
 									</div>
 								</a>
 							</article>
-						))
+						)
+					)
+				}
+			</section>
+		</div>
+
+		<!-- ===== 茶客卡片网格（古代主题，无 .ancient 变体时回退共用现代版） ===== -->
+		{hasAncient && (
+			<div data-split="ancient">
+				<section class="guest-grid" aria-label="茶客列表">
+					{
+						ancientList.map((guest, i) =>
+							guest.data.hidden ? (
+								<>
+									<article class="guest-card guest-card--locked" data-locked-placeholder>
+										<a class="guest-card__link" href="/puzzle-room/">
+											<div class="guest-card__img">
+												<span class="guest-card__placeholder">？</span>
+											</div>
+											<div class="guest-card__body">
+												<p class="guest-card__idx">NO.{String(i + 1).padStart(2, '0')}</p>
+												<h2 class="guest-card__name">？？？</h2>
+												<p class="guest-card__desc">尚未遇见。集齐地下室的口令后，Ta 会出现在这里。</p>
+												<p class="guest-card__meta">？？？ · ？？？</p>
+											</div>
+										</a>
+									</article>
+									<article class="guest-card" data-locked-guest hidden>
+										<a class="guest-card__link" href={`/guests/${pairKeyOf(guest.id)}/`}>
+											<div class="guest-card__img">
+												{
+													guest.data.portrait ? (
+														<img
+															src={guest.data.portrait}
+															alt={`${guest.data.name}的立绘`}
+															loading="lazy"
+														/>
+													) : (
+														<span class="guest-card__placeholder" aria-hidden="true">
+															{guest.data.name.charAt(0)}
+														</span>
+													)
+												}
+											</div>
+											<div class="guest-card__body">
+												<p class="guest-card__idx">NO.{String(i + 1).padStart(2, '0')}</p>
+												<h2 class="guest-card__name">{guest.data.name}</h2>
+												{
+													guest.data.description && (
+														<p class="guest-card__desc">{guest.data.description}</p>
+													)
+												}
+												<p class="guest-card__meta">
+													{guest.data.identity} ·{' '}
+													<span
+														class="guest-card__status"
+														data-status={guest.data.status}
+														style={statusTextStyle(String(guest.data.status ?? ''))}
+													>
+														{guest.data.status}
+													</span>
+												</p>
+											</div>
+										</a>
+									</article>
+								</>
+							) : (
+								<article class="guest-card">
+									<a class="guest-card__link" href={`/guests/${pairKeyOf(guest.id)}/`}>
+										<div class="guest-card__img">
+											{
+												guest.data.portrait ? (
+													<img
+														src={guest.data.portrait}
+														alt={`${guest.data.name}的立绘`}
+														loading="lazy"
+													/>
+												) : (
+													<span class="guest-card__placeholder" aria-hidden="true">
+														{guest.data.name.charAt(0)}
+													</span>
+												)
+											}
+										</div>
+										<div class="guest-card__body">
+											<p class="guest-card__idx">NO.{String(i + 1).padStart(2, '0')}</p>
+											<h2 class="guest-card__name">{guest.data.name}</h2>
+											{
+												guest.data.description && (
+													<p class="guest-card__desc">{guest.data.description}</p>
+												)
+											}
+											<p class="guest-card__meta">
+												{guest.data.identity} ·{' '}
+												<span
+													class="guest-card__status"
+													data-status={guest.data.status}
+													style={statusTextStyle(String(guest.data.status ?? ''))}
+												>
+													{guest.data.status}
+												</span>
+											</p>
+										</div>
+									</a>
+								</article>
+							)
+						)
 					}
 				</section>
 			</div>
@@ -200,6 +317,21 @@ const ancientList = guests.map((p) => entryFor(p, 'ancient')).filter(isDefined);
 		border-color: var(--accent);
 		box-shadow: 6px 6px 0 0 var(--accent);
 		transform: translate(-2px, -2px);
+	}
+
+	/* 未解锁的隐藏茶客：虚线框占位卡 */
+	.guest-card--locked {
+		border-style: dashed;
+	}
+
+	.guest-card--locked .guest-card__idx {
+		color: var(--fg-muted);
+	}
+
+	.guest-card--locked:hover,
+	.guest-card--locked:focus-within {
+		border-color: var(--fg-muted);
+		box-shadow: 6px 6px 0 0 var(--fg-muted);
 	}
 
 	.guest-card__link {
@@ -286,3 +418,20 @@ const ancientList = guests.map((p) => entryFor(p, 'ancient')).filter(isDefined);
 		outline-offset: 4px;
 	}
 </style>
+
+<script>
+	// 隐藏茶客（谜题彩蛋）：地下室解锁（daosu.puzzle.basement.v2）后显示真实档案
+	import { storageKey, loadFlag } from '../lib/puzzle';
+
+	const open = loadFlag(storageKey('basement'));
+	document.querySelectorAll<HTMLElement>('[data-locked-guest]').forEach((el) => {
+		el.hidden = !open;
+	});
+	document.querySelectorAll<HTMLElement>('[data-locked-placeholder]').forEach((el) => {
+		el.hidden = open;
+	});
+	const countEl = document.querySelector<HTMLElement>('[data-role="guest-count"]');
+	if (countEl && open) {
+		countEl.textContent = String(countEl.dataset.total ?? '');
+	}
+</script>

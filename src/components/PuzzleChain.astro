@@ -1,0 +1,529 @@
+---
+// ============================================================
+// 谜题链：多步骤问答，解开上一页才解锁下一页
+// - steps: 每步 { question, answer, aliases?, hints?(1-3 级), link?, revealHtml? }
+//   revealHtml 为已渲染的 markdown HTML；解开后以打字机逐字揭晓（点击可跳过）
+// - chainId: 进度存储键（daosu.puzzle.<chainId>.v2，localStorage 持久化）
+// - finalRevealHtml: 全部解开后显示的收尾文本（打字机揭晓）
+// 容错：忽略大小写/全半角/空白，支持同音字等别名
+// ============================================================
+interface ChainStep {
+	question: string;
+	answer: string;
+	aliases?: string[];
+	hints?: string[];
+	link?: { href: string; label: string };
+	revealHtml?: string;
+}
+
+const { chainId, steps, finalRevealHtml } = Astro.props as {
+	chainId: string;
+	steps: ChainStep[];
+	finalRevealHtml?: string;
+};
+
+const total = steps.length;
+---
+
+<section class="chain" data-chain-id={chainId} data-chain-steps={JSON.stringify(steps)} aria-label="谜题链">
+	<header class="chain__head">
+		<span class="chain__tag">谜题链 · CHAIN</span>
+		<span class="chain__progress" data-role="progress">0 / {total}</span>
+	</header>
+
+	<div class="chain__steps">
+		{
+			steps.map((s, i) => (
+				<div class="chain__step" data-step={i} data-state={i === 0 ? 'active' : 'locked'}>
+					<div class="chain__step-head">
+						<span class="chain__step-no">第 {i + 1} 页</span>
+						<span class="chain__step-status" data-role="status">锁着</span>
+					</div>
+					<p class="chain__locked-note" data-role="locked-note">这一页还合着。先解开前一页。</p>
+					<p class="chain__question" data-role="question">{s.question}</p>
+					{
+						s.link && (
+							<a class="chain__link" href={s.link.href}>{s.link.label}</a>
+						)
+					}
+					<div class="chain__form" data-role="form">
+						<input
+							class="chain__input"
+							data-role="input"
+							type="text"
+							placeholder="输入你的答案"
+							autocomplete="off"
+							spellcheck="false"
+							aria-label={`第 ${i + 1} 页谜题答案`}
+						/>
+						<button class="chain__submit" data-role="submit" type="button">作答</button>
+						<button class="chain__hint-btn" data-role="hint" type="button" hidden>提示</button>
+					</div>
+					<p class="chain__feedback" data-role="feedback" role="status"></p>
+					<div class="chain__reveal" data-role="reveal" hidden>
+						<div class="chain__reveal-inner" set:html={s.revealHtml} />
+					</div>
+				</div>
+			))
+		}
+	</div>
+
+	<div class="chain__final" data-role="final" hidden>
+		<div class="chain__final-inner" set:html={finalRevealHtml} />
+	</div>
+
+	<button class="chain__reset" data-role="reset" type="button">重新来过</button>
+</section>
+
+<style>
+	.chain {
+		margin-top: clamp(28px, 4vh, 44px);
+		border: var(--line) solid var(--border);
+		padding: 18px 20px 20px;
+	}
+
+	.chain__head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 12px;
+		flex-wrap: wrap;
+		margin-bottom: 14px;
+	}
+
+	.chain__tag {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.18em;
+		color: var(--accent);
+	}
+
+	.chain__progress {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.14em;
+		color: var(--fg-muted);
+	}
+
+	/* ===== 单页 ===== */
+	.chain__step {
+		border: 1px solid var(--grid-line);
+		padding: 14px 16px;
+		transition: border-color 0.15s ease, opacity 0.15s ease;
+	}
+
+	.chain__step + .chain__step {
+		margin-top: 12px;
+	}
+
+	.chain__step[data-state='active'] {
+		border-color: var(--border);
+	}
+
+	.chain__step-head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 12px;
+		margin-bottom: 10px;
+	}
+
+	.chain__step-no {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.18em;
+		color: var(--fg-muted);
+	}
+
+	.chain__step-status {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.14em;
+		color: var(--fg-muted);
+	}
+
+	.chain__step[data-state='solved'] .chain__step-status {
+		color: var(--accent);
+	}
+
+	/* 锁定态：只露标题与"合着"提示 */
+	.chain__locked-note {
+		display: none;
+		margin: 0;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.08em;
+		color: var(--fg-muted);
+	}
+
+	.chain__step[data-state='locked'] {
+		opacity: 0.6;
+	}
+
+	.chain__step[data-state='locked'] .chain__locked-note {
+		display: block;
+	}
+
+	.chain__step[data-state='locked'] .chain__question,
+	.chain__step[data-state='locked'] .chain__link,
+	.chain__step[data-state='locked'] .chain__form,
+	.chain__step[data-state='locked'] .chain__feedback,
+	.chain__step[data-state='locked'] .chain__reveal {
+		display: none;
+	}
+
+	/* 已解态：题目压暗，展示揭晓 */
+	.chain__step[data-state='solved'] .chain__question {
+		opacity: 0.55;
+		text-decoration: line-through;
+		text-decoration-thickness: 1px;
+		text-decoration-color: var(--fg-muted);
+	}
+
+	.chain__step[data-state='solved'] .chain__form,
+	.chain__step[data-state='solved'] .chain__feedback {
+		display: none;
+	}
+
+	.chain__question {
+		margin: 0 0 8px;
+		font-size: 15px;
+		font-weight: 600;
+		line-height: 2;
+	}
+
+	/* 跨页跳转链接 */
+	.chain__link {
+		display: inline-block;
+		margin-bottom: 12px;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.1em;
+		color: var(--accent);
+		text-decoration: underline;
+		text-underline-offset: 3px;
+		text-decoration-thickness: 1px;
+	}
+
+	.chain__link:hover {
+		text-decoration-thickness: 2px;
+	}
+
+	.chain__form {
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+
+	.chain__input {
+		flex: 1;
+		min-width: 180px;
+		padding: 11px 12px;
+		background: var(--bg);
+		color: var(--fg);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		font: 500 14px/1 var(--font-sans);
+		outline: none;
+		transition: border-color 0.15s ease;
+	}
+
+	.chain__input:focus {
+		border-color: var(--accent);
+	}
+
+	.chain__submit,
+	.chain__hint-btn {
+		padding: 11px 18px;
+		background: var(--fg);
+		color: var(--bg);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		font: 700 12px/1 var(--font-mono);
+		letter-spacing: 0.14em;
+		cursor: pointer;
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+
+	.chain__submit:hover,
+	.chain__hint-btn:hover {
+		background: var(--accent);
+		color: var(--bg);
+		border-color: var(--accent);
+	}
+
+	.chain__submit[disabled],
+	.chain__hint-btn[disabled] {
+		opacity: 0.45;
+		cursor: default;
+	}
+
+	.chain__submit[disabled]:hover,
+	.chain__hint-btn[disabled]:hover {
+		background: var(--fg);
+		color: var(--bg);
+		border-color: var(--border);
+	}
+
+	.chain__hint-btn {
+		background: transparent;
+		color: var(--fg-muted);
+	}
+
+	.chain__hint-btn:hover {
+		background: var(--fg);
+		color: var(--bg);
+		border-color: var(--border);
+	}
+
+	.chain__feedback {
+		margin: 10px 0 0;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.06em;
+		color: var(--fg-muted);
+		min-height: 1em;
+	}
+
+	.chain__feedback.is-error {
+		color: var(--accent);
+	}
+
+	.chain__reveal {
+		margin-top: 12px;
+		padding: 14px 16px;
+		background: var(--fg);
+		color: var(--bg);
+	}
+
+	.chain__reveal[hidden] {
+		display: none;
+	}
+
+	.chain__reveal-inner {
+		font-size: 14px;
+		line-height: 2;
+		min-height: 1em;
+	}
+
+	.chain__reveal-inner p {
+		margin: 0 0 0.6em;
+	}
+
+	.chain__reveal-inner p:last-child {
+		margin-bottom: 0;
+	}
+
+	/* ===== 收尾 ===== */
+	.chain__final {
+		margin-top: 16px;
+		padding: 16px 18px;
+		border: var(--line) dashed var(--accent);
+		background-color: var(--bg-alt);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+	}
+
+	.chain__final[hidden] {
+		display: none;
+	}
+
+	.chain__final-inner {
+		font-size: 14px;
+		line-height: 2;
+		min-height: 1em;
+	}
+
+	.chain__final-inner p {
+		margin: 0 0 0.6em;
+	}
+
+	.chain__final-inner p:last-child {
+		margin-bottom: 0;
+	}
+
+	/* ===== 重置 ===== */
+	.chain__reset {
+		margin-top: 14px;
+		padding: 6px 10px;
+		background: transparent;
+		color: var(--fg-muted);
+		border: 1px solid var(--grid-line);
+		border-radius: 0;
+		font: 700 11px/1 var(--font-mono);
+		letter-spacing: 0.12em;
+		cursor: pointer;
+		transition: color 0.15s ease, border-color 0.15s ease;
+	}
+
+	.chain__reset:hover {
+		color: var(--accent);
+		border-color: var(--accent);
+	}
+</style>
+
+<script>
+	import { normalize, matches, storageKey, loadSolved, typewrite } from '../lib/puzzle';
+
+	// 数据经 data-* 属性传入（define:vars 脚本无法 import 模块），
+	// 按 .chain 遍历以支持同页多实例
+	document.querySelectorAll<HTMLElement>('.chain').forEach((section) => {
+		const chainId = section.dataset.chainId ?? '';
+		const steps = JSON.parse(section.dataset.chainSteps ?? '[]') as {
+			question: string;
+			answer: string;
+			aliases?: string[];
+			hints?: string[];
+			revealHtml?: string;
+		}[];
+		if (!chainId || !Array.isArray(steps) || steps.length === 0) return;
+
+		const stepEls = Array.from(section.querySelectorAll<HTMLElement>('.chain__step'));
+		const progressEl = section.querySelector<HTMLElement>('[data-role="progress"]');
+		const finalEl = section.querySelector<HTMLElement>('[data-role="final"]');
+		const resetEl = section.querySelector<HTMLElement>('[data-role="reset"]');
+		const key = storageKey(chainId);
+
+		let solved = loadSolved(key).filter((i) => i >= 0 && i < stepEls.length);
+		// 每步已用掉的提示次数（不持久化）
+		const hintUsed = new Map<number, number>();
+
+		const persist = () => {
+			try {
+				localStorage.setItem(key, JSON.stringify(solved));
+			} catch {
+				/* 隐私模式等场景忽略 */
+			}
+		};
+
+		const firstUnsolved = () => stepEls.findIndex((_, i) => !solved.includes(i));
+
+		const revealTyped = (reveal: HTMLElement | null, inner: HTMLElement | null) => {
+			if (!reveal || !inner) return;
+			reveal.hidden = false;
+			const plain = inner.textContent ?? '';
+			inner.textContent = '';
+			const finish = typewrite(inner, plain, 26);
+			inner.addEventListener('click', () => finish(), { once: true });
+		};
+
+		const refresh = () => {
+			const cur = firstUnsolved();
+			stepEls.forEach((el, i) => {
+				const isSolved = solved.includes(i);
+				el.dataset.state = isSolved ? 'solved' : i === cur ? 'active' : 'locked';
+				const statusEl = el.querySelector('[data-role="status"]');
+				if (statusEl) statusEl.textContent = isSolved ? '已解' : i === cur ? '待解' : '锁着';
+				// 已解步骤直接展示（不重播打字机），由 set:html 初始内容兜底
+				const reveal = el.querySelector<HTMLElement>('[data-role="reveal"]');
+				if (reveal) reveal.hidden = !isSolved;
+			});
+			if (progressEl) progressEl.textContent = `${solved.length} / ${stepEls.length}`;
+			if (finalEl) finalEl.hidden = solved.length !== stepEls.length;
+			// 通知页面（地下室门面板等）刷新状态
+			window.dispatchEvent(
+				new CustomEvent('daosu:puzzle-update', {
+					detail: { kind: 'chain', id: chainId, solved: solved.length, total: stepEls.length },
+				})
+			);
+		};
+
+		const check = (el: HTMLElement) => {
+			const i = Number(el.dataset.step);
+			if (solved.includes(i)) return;
+			const input = el.querySelector<HTMLInputElement>('[data-role="input"]');
+			const feedback = el.querySelector<HTMLElement>('[data-role="feedback"]');
+			if (!input || !feedback) return;
+			const v = input.value;
+			if (!normalize(v)) {
+				feedback.textContent = '请写下你的答案。';
+				feedback.classList.add('is-error');
+				return;
+			}
+			if (matches(v, steps[i].answer, steps[i].aliases ?? [])) {
+				solved.push(i);
+				persist();
+				// 打字机揭晓
+				const reveal = el.querySelector<HTMLElement>('[data-role="reveal"]');
+				const inner = reveal?.querySelector<HTMLElement>('.chain__reveal-inner') ?? null;
+				refresh();
+				revealTyped(reveal, inner);
+				feedback.textContent = '答对了。';
+				feedback.classList.remove('is-error');
+				input.blur();
+				// 最后一页解开：收尾文本打字机
+				if (solved.length === stepEls.length && finalEl) {
+					const finalInner = finalEl.querySelector<HTMLElement>('.chain__final-inner');
+					revealTyped(finalEl, finalInner);
+				}
+			} else {
+				feedback.textContent = '不对，再想想。';
+				feedback.classList.add('is-error');
+				const hintBtn = el.querySelector<HTMLButtonElement>('[data-role="hint"]');
+				if (hintBtn) hintBtn.hidden = false;
+			}
+		};
+
+		stepEls.forEach((el) => {
+			const submit = el.querySelector('[data-role="submit"]');
+			const input = el.querySelector<HTMLInputElement>('[data-role="input"]');
+			const hintBtn = el.querySelector<HTMLButtonElement>('[data-role="hint"]');
+			if (submit) submit.addEventListener('click', () => check(el));
+			if (input) input.addEventListener('keydown', (e) => { if (e.key === 'Enter') check(el); });
+			if (hintBtn) {
+				hintBtn.addEventListener('click', () => {
+					const feedback = el.querySelector<HTMLElement>('[data-role="feedback"]');
+					if (!feedback) return;
+					const i = Number(el.dataset.step);
+					const hints = steps[i].hints ?? [];
+					if (hints.length === 0) {
+						feedback.textContent = '没有更多提示了。';
+						feedback.classList.remove('is-error');
+						hintBtn.disabled = true;
+						return;
+					}
+					const used = hintUsed.get(i) ?? 0;
+					if (used >= hints.length) {
+						feedback.textContent = '没有更多提示了。';
+						feedback.classList.remove('is-error');
+						hintBtn.disabled = true;
+						return;
+					}
+					feedback.textContent = `提示 ${used + 1}/${hints.length}：${hints[used]}`;
+					feedback.classList.remove('is-error');
+					hintUsed.set(i, used + 1);
+					if (used + 1 >= hints.length) hintBtn.disabled = true;
+				});
+			}
+		});
+
+		if (resetEl) {
+			resetEl.addEventListener('click', () => {
+				solved = [];
+				hintUsed.clear();
+				try {
+					localStorage.removeItem(key);
+				} catch {
+					/* ignore */
+				}
+				stepEls.forEach((el) => {
+					const input = el.querySelector<HTMLInputElement>('[data-role="input"]');
+					if (input) { input.value = ''; input.disabled = false; }
+					const fb = el.querySelector('[data-role="feedback"]');
+					if (fb) fb.textContent = '';
+					const hintBtn = el.querySelector<HTMLButtonElement>('[data-role="hint"]');
+					if (hintBtn) { hintBtn.hidden = true; hintBtn.disabled = false; }
+					const reveal = el.querySelector<HTMLElement>('[data-role="reveal"]');
+					if (reveal) reveal.hidden = true;
+				});
+				if (finalEl) finalEl.hidden = true;
+				refresh();
+			});
+		}
+
+		refresh();
+	});
+</script>

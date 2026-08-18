@@ -1,0 +1,366 @@
+---
+// ============================================================
+// 相册复原：把打乱的"照片"按正确顺序排好（点两张交换位置）
+// - sortId: 进度存储键（daosu.puzzle.<sortId>.v2：记录排列与是否已复原）
+// - photos: 每张 { num（页码，排好后连成密码）, line（照片内容） }
+// - 排对后派发 daosu:puzzle-update { kind:'album', id, solved:1, total:1 }，
+//   由页面据此解锁下一环节（如内门转盘）
+// 纯文字，无图片依赖
+// ============================================================
+interface Photo {
+	num: string;
+	line: string;
+}
+
+const { sortId, photos, tipText, wrongText, solvedText } = Astro.props as {
+	sortId: string;
+	photos: Photo[];
+	tipText?: string;
+	wrongText?: string;
+	solvedText?: string;
+};
+
+const serialized = JSON.stringify(photos);
+const texts = JSON.stringify({
+	tip: tipText ?? '',
+	wrong: wrongText ?? '',
+	solved: solvedText ?? '',
+});
+---
+
+<section
+	class="album"
+	data-album
+	data-album-id={sortId}
+	data-photos={serialized}
+	data-texts={texts}
+	aria-label="相册复原"
+>
+	<header class="album__head">
+		<span class="album__tag">相册 · ALBUM</span>
+		<span class="album__status" data-role="status">乱序</span>
+	</header>
+
+	<p class="album__tip" data-role="tip"></p>
+
+	<div class="album__grid" data-role="grid" aria-live="polite"></div>
+
+	<div class="album__actions">
+		<button class="album__check" data-role="check" type="button">合上相册</button>
+		<button class="album__shuffle" data-role="shuffle" type="button">再打乱</button>
+	</div>
+
+	<p class="album__feedback" data-role="feedback" role="status"></p>
+</section>
+
+<style>
+	.album {
+		margin-top: clamp(28px, 4vh, 44px);
+		border: var(--line) solid var(--border);
+		padding: 18px 20px 20px;
+	}
+
+	.album__head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 12px;
+		flex-wrap: wrap;
+		margin-bottom: 12px;
+	}
+
+	.album__tag {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.16em;
+		color: var(--accent);
+	}
+
+	.album__status {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.14em;
+		color: var(--fg-muted);
+	}
+
+	.album__status.is-solved {
+		color: var(--accent);
+	}
+
+	.album__tip {
+		margin: 0 0 14px;
+		font-size: 13px;
+		line-height: 2;
+		color: var(--fg-muted);
+	}
+
+	/* ===== 照片格 ===== */
+	.album__grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		gap: 10px;
+	}
+
+	.album__tile {
+		position: relative;
+		border: var(--line) solid var(--border);
+		padding: 14px 16px 14px 14px;
+		background-color: var(--bg);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+		cursor: pointer;
+		text-align: left;
+		font: inherit;
+		color: inherit;
+		transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+	}
+
+	.album__tile:hover {
+		border-color: var(--accent);
+	}
+
+	.album__tile.is-selected {
+		border-color: var(--accent);
+		box-shadow: 4px 4px 0 0 var(--accent);
+		transform: translate(-1px, -1px);
+	}
+
+	.album__tile.is-solved {
+		cursor: default;
+		opacity: 0.75;
+	}
+
+	.album__num {
+		display: block;
+		margin-bottom: 10px;
+		font-family: var(--font-mono);
+		font-size: 22px;
+		font-weight: 900;
+		letter-spacing: 0.1em;
+		color: var(--accent);
+	}
+
+	.album__line {
+		display: block;
+		font-size: 13px;
+		line-height: 1.9;
+	}
+
+	.album__tile.is-solved .album__num {
+		color: var(--fg-muted);
+	}
+
+	/* ===== 操作 / 反馈 ===== */
+	.album__actions {
+		margin-top: 14px;
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+
+	.album__check {
+		padding: 11px 18px;
+		background: var(--fg);
+		color: var(--bg);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		font: 700 12px/1 var(--font-mono);
+		letter-spacing: 0.14em;
+		cursor: pointer;
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+
+	.album__check:hover {
+		background: var(--accent);
+		color: var(--bg);
+		border-color: var(--accent);
+	}
+
+	.album__shuffle {
+		padding: 11px 16px;
+		background: transparent;
+		color: var(--fg-muted);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		font: 700 12px/1 var(--font-mono);
+		letter-spacing: 0.12em;
+		cursor: pointer;
+		transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+	}
+
+	.album__shuffle:hover {
+		background: var(--fg);
+		color: var(--bg);
+		border-color: var(--border);
+	}
+
+	.album__feedback {
+		margin: 12px 0 0;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.06em;
+		color: var(--fg-muted);
+		min-height: 1em;
+	}
+
+	.album__feedback.is-error {
+		color: var(--accent);
+	}
+
+	.album__feedback.is-open {
+		color: var(--accent);
+	}
+</style>
+
+<script>
+	import { storageKey } from '../lib/puzzle';
+
+	document.querySelectorAll<HTMLElement>('.album').forEach((section) => {
+		const sortId = section.dataset.albumId ?? '';
+		const photos = JSON.parse(section.dataset.photos ?? '[]') as { num: string; line: string }[];
+		const texts = JSON.parse(section.dataset.texts ?? '{}') as {
+			tip?: string;
+			wrong?: string;
+			solved?: string;
+		};
+		if (!sortId || !Array.isArray(photos) || photos.length === 0) return;
+
+		const key = storageKey(sortId);
+		const gridEl = section.querySelector<HTMLElement>('[data-role="grid"]');
+		const tipEl = section.querySelector<HTMLElement>('[data-role="tip"]');
+		const statusEl = section.querySelector<HTMLElement>('[data-role="status"]');
+		const feedbackEl = section.querySelector<HTMLElement>('[data-role="feedback"]');
+		const checkBtn = section.querySelector<HTMLElement>('[data-role="check"]');
+		const shuffleBtn = section.querySelector<HTMLElement>('[data-role="shuffle"]');
+
+		const CORRECT = photos.map((_, i) => i);
+		let solved = false;
+		// 当前排列：photos 下标数组
+		let order: number[] = [];
+
+		const persist = () => {
+			try {
+				localStorage.setItem(key, JSON.stringify({ order, solved }));
+			} catch {
+				/* ignore */
+			}
+		};
+
+		const restore = () => {
+			try {
+				const raw = JSON.parse(localStorage.getItem(key) ?? 'null');
+				if (raw && typeof raw === 'object' && Array.isArray(raw.order)) {
+					order = raw.order.filter((n: unknown) => typeof n === 'number');
+					solved = raw.solved === true;
+				}
+			} catch {
+				/* ignore */
+			}
+			if (order.length !== photos.length) {
+				order = [...CORRECT];
+				for (let i = order.length - 1; i > 0; i--) {
+					const j = Math.floor(Math.random() * (i + 1));
+					[order[i], order[j]] = [order[j], order[i]];
+				}
+				if (solved) solved = false;
+			}
+			// 复原过：固定为正确顺序
+			if (solved) order = [...CORRECT];
+		};
+
+		let selected: number | null = null;
+
+		const render = () => {
+			if (!gridEl) return;
+			gridEl.innerHTML = '';
+			order.forEach((photoIdx, pos) => {
+				const tile = document.createElement('button');
+				tile.type = 'button';
+				tile.className = 'album__tile' + (solved ? ' is-solved' : '');
+				if (!solved && selected === pos) tile.classList.add('is-selected');
+				const num = document.createElement('span');
+				num.className = 'album__num';
+				num.textContent = photos[photoIdx].num;
+				const line = document.createElement('span');
+				line.className = 'album__line';
+				line.textContent = photos[photoIdx].line;
+				tile.append(num, line);
+				tile.addEventListener('click', () => {
+					if (solved) return;
+					if (selected === null) {
+						selected = pos;
+					} else if (selected === pos) {
+						selected = null;
+					} else {
+						[order[selected], order[pos]] = [order[pos], order[selected]];
+						selected = null;
+						persist();
+						if (feedbackEl) {
+							feedbackEl.textContent = '';
+							feedbackEl.classList.remove('is-error', 'is-open');
+						}
+					}
+					render();
+				});
+				gridEl.appendChild(tile);
+			});
+			if (statusEl) {
+				statusEl.textContent = solved ? '已复原' : '乱序';
+				statusEl.classList.toggle('is-solved', solved);
+			}
+		};
+
+		if (tipEl) tipEl.textContent = texts.tip ?? '点两张照片交换位置，按时间排好。';
+
+		if (checkBtn) {
+			checkBtn.addEventListener('click', () => {
+				if (!feedbackEl) return;
+				if (solved) {
+					feedbackEl.textContent = texts.solved ?? '相册已经合上了。';
+					feedbackEl.classList.remove('is-error');
+					feedbackEl.classList.add('is-open');
+					return;
+				}
+				if (order.every((v, i) => v === CORRECT[i])) {
+					solved = true;
+					persist();
+					render();
+					feedbackEl.textContent = texts.solved ?? '咔哒。相册合上了——页码连起来，就是密码。';
+					feedbackEl.classList.remove('is-error');
+					feedbackEl.classList.add('is-open');
+					window.dispatchEvent(
+						new CustomEvent('daosu:puzzle-update', {
+							detail: { kind: 'album', id: sortId, solved: 1, total: 1 },
+						})
+					);
+				} else {
+					feedbackEl.textContent = texts.wrong ?? '页码对不上。再想想——哪张照片最先发生？';
+					feedbackEl.classList.add('is-error');
+					feedbackEl.classList.remove('is-open');
+				}
+			});
+		}
+
+		if (shuffleBtn) {
+			shuffleBtn.addEventListener('click', () => {
+				solved = false;
+				selected = null;
+				order = [...CORRECT];
+				for (let i = order.length - 1; i > 0; i--) {
+					const j = Math.floor(Math.random() * (i + 1));
+					[order[i], order[j]] = [order[j], order[i]];
+				}
+				persist();
+				if (feedbackEl) {
+					feedbackEl.textContent = '';
+					feedbackEl.classList.remove('is-error', 'is-open');
+				}
+				render();
+			});
+		}
+
+		restore();
+		render();
+	});
+</script>

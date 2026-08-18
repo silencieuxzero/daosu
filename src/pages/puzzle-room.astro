@@ -1,0 +1,343 @@
+---
+// ============================================================
+// 谜题间（跨页寻宝版）：琈予留书 → 旧账本两页（答案藏在真实页面里）
+// → 后院顺序寻物 → 地下室门面板。口令四字：不忘凉茶。
+// 进度存 localStorage（daosu.puzzle.<id>.v2）
+// ============================================================
+import Layout from '../layouts/Layout.astro';
+import PuzzleChain from '../components/PuzzleChain.astro';
+import TextCourtyard from '../components/TextCourtyard.astro';
+import { createMarkdownProcessor } from '@astrojs/markdown-remark';
+import remarkSpoiler from '../lib/remark-spoiler.mjs';
+
+const processor = await createMarkdownProcessor({
+	remarkPlugins: [remarkSpoiler],
+	syntaxHighlight: false,
+});
+const md = (t: string) => processor.render(t).then((r) => r.code);
+
+// ---------- 一 · 旧账本（谜题链）→ 口令前半「不忘」 ----------
+// 答案分别藏在：查维尔档案（不要逗我笑！→ 不）、
+//             《以此，这是我的故事。》第四节（别忘了我。→ 忘）
+const chainSteps = [
+	{
+		question:
+			'账本第一页夹着一张字条：「去查维尔的档案。有人对 Ta 开玩笑时，Ta 总会习惯性地反驳一句——五个字。账本记的是这五个字的第一个字。」',
+		answer: '不',
+		aliases: ['布', '步', '部'],
+		hints: [
+			'查维尔档案的「补充设定」那一段。',
+			'五个字：「不要逗我笑！」——取第一个字。',
+			'答案是「不」。',
+		],
+		link: { href: '/guests/chawelier/', label: '去查维尔的档案 →' },
+		reveal: await md('第一页记的是「不」。页角有一行极淡的小字：\n\n还有一页。'),
+	},
+	{
+		question:
+			'账本第二页夹着第二张字条：「去读《以此，这是我的故事。》第四节。半截标牌的背面，除了那个名字，还压着一行更小、更浅的字。账本记的是那行字的第二个字。」',
+		answer: '忘',
+		aliases: ['望', '妄'],
+		hints: [
+			'《以此，这是我的故事。》第四节，标牌背面刮出来的那行字。',
+			'那行字是「别忘了我。」——取第二个字。',
+			'答案是「忘」。',
+		],
+		link: { href: '/stories/yi-ci-zhe-shi-wo-de-gu-shi/', label: '去读这篇故事 →' },
+		reveal: await md('第二页记的是「忘」。两页合起来——**不忘**。\n\n你听见后院的水声停了一瞬，像在等谁。'),
+	},
+];
+const chainFinal = await md('旧账本合上了。口令的前一半：**不忘**。\n\n剩下一半，藏在后院——从墙头开始，一样一样找下去。');
+
+// ---------- 二 · 后院（文字探险）→ 口令后半「凉茶」 ----------
+// 顺序：墙头断绳 → 石桌茶包 → 池边鱼鳞 → 水中枯叶；每处文字指向下一处
+const huntIntro = await md('后院不大：一堵墙、一棵老槐、一池水、一张石桌。有四样东西不该出现在这里。\n\n它们按着某种顺序排着——**从墙头开始**，一样一样找下去。输入命令（如「看墙头」），或点下面的按钮。');
+const huntPlaces = [
+	{
+		id: 'wall',
+		label: '墙头',
+		keywords: ['墙头', '墙', '断绳'],
+		textHtml: await md('一段断绳，挂在墙钉上，绳头磨得发白，像是被人扯断的。绳结里夹着一片茶叶——它指着石桌的方向。'),
+	},
+	{
+		id: 'table',
+		label: '石桌',
+		keywords: ['石桌', '桌', '茶包'],
+		textHtml: await md('半包旧茶叶，纸包被水浸透又晒干，字迹褪成浅浅的痕迹。纸包背面画着一枚鱼鳞，鳞尖指向水池。'),
+	},
+	{
+		id: 'pond',
+		label: '池边',
+		keywords: ['池边', '池', '鱼鳞'],
+		textHtml: await md('一枚鱼鳞，躺在池边的石头上，反着灯笼的光。鳞面上有一道水痕，指向水中央。'),
+	},
+	{
+		id: 'water',
+		label: '水里',
+		keywords: ['水里', '水', '枯叶'],
+		textHtml: await md('一片枯叶，浸在水里。翻过来——叶脉连成两个字：**凉茶**。'),
+	},
+];
+const huntReward = await md('四样东西，按着顺序，各自指路。\n\n口令的后一半：**凉茶**。');
+const huntHint = '从墙头开始，一样一样找下去。';
+const huntWrong = '还不到时候。从墙头开始，一样一样找下去。';
+const huntFallback = '后院没有那样东西。你环顾四周：一堵墙、一棵老槐、一池水、一张石桌。';
+
+const chainTotal = chainSteps.length;
+const yardTotal = huntPlaces.length;
+---
+
+<Layout title={`谜题间 · ${'悼溯茶馆'}`}>
+	<main class="page">
+		<article>
+			<header class="page-head">
+				<p class="kicker">谜题间</p>
+				<h1>茶馆里的谜题</h1>
+			</header>
+
+			<!-- ===== 琈予留书 ===== -->
+			<blockquote class="letter">
+				<p class="letter__body">
+					杂物间尽头有一扇门，门后是地下室。口令我拆成了两半——前半段，收在柜台后面的旧账本里，两页各藏一个字；后半段，散在后院，从墙头开始，一样一样找下去。
+				</p>
+				<p class="letter__body">凑齐四个字，门自会开。</p>
+				<p class="letter__body letter__body--soft">别急，茶还温着。</p>
+				<p class="letter__sig">——琈予</p>
+			</blockquote>
+
+			<h2 class="section-title">一 · 旧账本（两页）</h2>
+			<PuzzleChain chainId="ledger" steps={chainSteps} finalRevealHtml={chainFinal} />
+
+			<h2 class="section-title">二 · 后院（文字探险）</h2>
+			<TextCourtyard
+				huntId="yard"
+				introHtml={huntIntro}
+				places={huntPlaces}
+				rewardHtml={huntReward}
+				hintText={huntHint}
+				wrongOrderText={huntWrong}
+				fallbackText={huntFallback}
+			/>
+
+			<h2 class="section-title">三 · 地下室的门</h2>
+			<section
+				class="door"
+				data-door-panel
+				data-chain-total={chainTotal}
+				data-yard-total={yardTotal}
+				aria-label="地下室的门"
+			>
+				<header class="door__head">
+					<span class="door__tag">地下室 · DOOR</span>
+					<span class="door__status" data-role="door-status">门锁着</span>
+				</header>
+				<p class="door__note">口令四个字：前半藏在旧账本里，后半藏在后院。集齐四字，门自会开。</p>
+				<ul class="door__parts">
+					<li data-role="part-chain">
+						<span class="door__part-name">前半段口令</span>
+						<span class="door__part-state" data-role="part-chain-state">藏在旧账本里 · 未找到</span>
+					</li>
+					<li data-role="part-yard">
+						<span class="door__part-name">后半段口令</span>
+						<span class="door__part-state" data-role="part-yard-state">藏在后院 · 未找到</span>
+					</li>
+				</ul>
+				<a class="btn btn--solid door__link" href="/basement" data-role="door-link" hidden>
+					打开地下室的门 →
+				</a>
+			</section>
+		</article>
+	</main>
+</Layout>
+
+<style>
+	.page {
+		padding: clamp(40px, 6vh, 72px) clamp(16px, 4vw, 48px);
+		max-width: 760px;
+		margin: 0 auto;
+	}
+
+	.page-head {
+		position: relative;
+		padding-bottom: 26px;
+		margin-bottom: 10px;
+		border-bottom: var(--line) solid var(--border);
+		background-color: var(--bg);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+	}
+
+	.page-head h1 {
+		margin-top: 14px;
+		font-size: clamp(28px, 4.5vw, 42px);
+		font-weight: 900;
+	}
+
+	/* ===== 琈予留书 ===== */
+	.letter {
+		margin: clamp(28px, 4vh, 44px) 0 0;
+		padding: 22px 24px;
+		border: var(--line) solid var(--border);
+		background-color: var(--bg-alt);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+		border-left: 6px solid var(--accent);
+	}
+
+	.letter__body {
+		margin: 0 0 0.9em;
+		font-family: 'STKaiti', 'KaiTi', 'SimSun', 'Noto Serif SC', serif;
+		font-size: 15px;
+		line-height: 2.1;
+		text-align: justify;
+	}
+
+	.letter__body:last-of-type {
+		margin-bottom: 0;
+	}
+
+	.letter__body--soft {
+		color: var(--fg-muted);
+	}
+
+	.letter__sig {
+		margin: 16px 0 0;
+		text-align: right;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.14em;
+		color: var(--accent);
+	}
+
+	.section-title {
+		margin: clamp(36px, 5vh, 52px) 0 0;
+		font-size: 18px;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		padding-bottom: 10px;
+		border-bottom: var(--line) solid var(--border);
+	}
+
+	/* ===== 地下室门面板 ===== */
+	.door {
+		margin-top: clamp(28px, 4vh, 44px);
+		border: var(--line) solid var(--border);
+		padding: 18px 20px 20px;
+	}
+
+	.door__head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 12px;
+		flex-wrap: wrap;
+		margin-bottom: 12px;
+	}
+
+	.door__tag {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.18em;
+		color: var(--accent);
+	}
+
+	.door__status {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.14em;
+		color: var(--fg-muted);
+	}
+
+	.door__status.is-open {
+		color: var(--accent);
+	}
+
+	.door__note {
+		margin: 0 0 14px;
+		font-size: 14px;
+		line-height: 2;
+	}
+
+	.door__parts {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		border-top: var(--line) solid var(--border);
+	}
+
+	.door__parts li {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 12px;
+		flex-wrap: wrap;
+		padding: 12px 0;
+		border-bottom: 1px solid var(--grid-line);
+	}
+
+	.door__part-name {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.14em;
+		color: var(--fg-muted);
+	}
+
+	.door__part-state {
+		font-size: 13px;
+	}
+
+	.door__part-state.is-found {
+		color: var(--accent);
+		font-weight: 700;
+	}
+
+	.door__link {
+		margin-top: 18px;
+		text-decoration: none;
+	}
+
+	.door__link[hidden] {
+		display: none;
+	}
+</style>
+
+<script>
+	import { storageKey, loadSolved } from '../lib/puzzle';
+
+	const panel = document.querySelector<HTMLElement>('[data-door-panel]');
+	if (panel) {
+		const chainKey = storageKey('ledger');
+		const yardKey = storageKey('yard');
+		const chainTotal = Number(panel.dataset.chainTotal ?? 0);
+		const yardTotal = Number(panel.dataset.yardTotal ?? 0);
+		const statusEl = panel.querySelector('[data-role="door-status"]');
+		const chainState = panel.querySelector('[data-role="part-chain-state"]');
+		const yardState = panel.querySelector('[data-role="part-yard-state"]');
+		const linkEl = panel.querySelector<HTMLElement>('[data-role="door-link"]');
+
+		const update = () => {
+			const chainDone = loadSolved(chainKey).length >= chainTotal;
+			const yardDone = loadSolved(yardKey).length >= yardTotal;
+			const open = chainDone && yardDone;
+
+			if (chainState) {
+				chainState.textContent = chainDone ? '旧账本 · 已找到' : '藏在旧账本里 · 未找到';
+				chainState.classList.toggle('is-found', chainDone);
+			}
+			if (yardState) {
+				yardState.textContent = yardDone ? '后院 · 已找到' : '藏在后院 · 未找到';
+				yardState.classList.toggle('is-found', yardDone);
+			}
+			if (statusEl) {
+				statusEl.textContent = open ? '门开了' : '门锁着';
+				statusEl.classList.toggle('is-open', open);
+			}
+			if (linkEl) linkEl.hidden = !open;
+		};
+
+		window.addEventListener('daosu:puzzle-update', update);
+		update();
+	}
+</script>

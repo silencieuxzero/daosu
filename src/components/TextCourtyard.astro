@@ -1,0 +1,498 @@
+---
+// ============================================================
+// 文字后院探险：纯文字版寻物（无图片依赖）
+// 按 places 数组顺序逐处探索：输入命令（如「看墙头」）或点按钮，
+// 每处文字揭晓（打字机，可点击跳过），并指向下一处
+// - huntId: 进度存储键（沿用 daosu.puzzle.<huntId>.v2，与门面板兼容）
+// - introHtml / rewardHtml: 开场说明与找齐后的奖励文本（markdown 渲染）
+// ============================================================
+interface Place {
+	id: string;
+	label: string;
+	keywords: string[];
+	textHtml: string;
+}
+
+const { huntId, introHtml, places, rewardHtml, hintText, wrongOrderText, fallbackText } =
+	Astro.props as {
+		huntId: string;
+		introHtml?: string;
+		places: Place[];
+		rewardHtml?: string;
+		hintText?: string;
+		wrongOrderText?: string;
+		fallbackText?: string;
+	};
+
+const total = places.length;
+const serialized = JSON.stringify(places.map((p) => ({ label: p.label, keywords: p.keywords, textHtml: p.textHtml })));
+const texts = JSON.stringify({
+	hint: hintText ?? '',
+	wrong: wrongOrderText ?? '',
+	fallback: fallbackText ?? '',
+});
+---
+
+<section class="yard" data-yard data-yard-id={huntId} data-places={serialized} data-texts={texts} aria-label="后院探险">
+	<header class="yard__head">
+		<span class="yard__tag">后院 · TEXT ADVENTURE</span>
+		<span class="yard__progress" data-role="progress">已探索 0 / {total}</span>
+	</header>
+
+	{introHtml && <div class="yard__intro" set:html={introHtml} />}
+
+	<div class="yard__log" data-role="log" aria-live="polite"></div>
+
+	<form class="yard__cmd" data-role="cmd">
+		<input
+			class="yard__input"
+			data-role="input"
+			type="text"
+			placeholder={`输入命令，如：看${places[0]?.label ?? ''}`}
+			autocomplete="off"
+			spellcheck="false"
+			aria-label="探索命令"
+		/>
+		<button class="yard__go" data-role="go" type="submit">查看</button>
+	</form>
+
+	<div class="yard__quick">
+		{
+			places.map((p, i) => (
+				<button class="yard__quick-btn" data-role="quick" data-place={i} type="button">
+					{p.label}
+				</button>
+			))
+		}
+	</div>
+
+	<p class="yard__feedback" data-role="feedback" role="status"></p>
+
+	<div class="yard__actions">
+		<button class="yard__hint" data-role="hint" type="button">线索提示</button>
+		<button class="yard__reset" data-role="reset" type="button">重新来过</button>
+	</div>
+
+	<div class="yard__reward" data-role="reward" hidden>
+		<div class="yard__reward-inner" set:html={rewardHtml} />
+	</div>
+</section>
+
+<style>
+	.yard {
+		margin-top: clamp(28px, 4vh, 44px);
+		border: var(--line) solid var(--border);
+		padding: 18px 20px 20px;
+	}
+
+	.yard__head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 12px;
+		flex-wrap: wrap;
+		margin-bottom: 14px;
+	}
+
+	.yard__tag {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.14em;
+		color: var(--accent);
+	}
+
+	.yard__progress {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.14em;
+		color: var(--fg-muted);
+	}
+
+	.yard__intro {
+		font-size: 14px;
+		line-height: 2;
+		margin-bottom: 14px;
+	}
+
+	.yard__intro p {
+		margin: 0;
+	}
+
+	/* ===== 探索记录 ===== */
+	.yard__log {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		margin-bottom: 14px;
+	}
+
+	.yard__entry {
+		border: 1px solid var(--grid-line);
+		border-left: 4px solid var(--accent);
+		padding: 10px 14px;
+		background-color: var(--bg-alt);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+	}
+
+	.yard__entry-label {
+		display: block;
+		margin-bottom: 6px;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.16em;
+		color: var(--accent);
+	}
+
+	.yard__entry-text {
+		margin: 0;
+		font-size: 14px;
+		line-height: 2;
+		min-height: 1em;
+	}
+
+	/* ===== 命令 ===== */
+	.yard__cmd {
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+
+	.yard__input {
+		flex: 1;
+		min-width: 200px;
+		padding: 12px 14px;
+		background: var(--bg);
+		color: var(--fg);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		font: 500 14px/1 var(--font-sans);
+		outline: none;
+		transition: border-color 0.15s ease;
+	}
+
+	.yard__input:focus {
+		border-color: var(--accent);
+	}
+
+	.yard__go {
+		padding: 12px 20px;
+		background: var(--fg);
+		color: var(--bg);
+		border: var(--line) solid var(--border);
+		border-radius: 0;
+		font: 700 12px/1 var(--font-mono);
+		letter-spacing: 0.14em;
+		cursor: pointer;
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+
+	.yard__go:hover {
+		background: var(--accent);
+		color: var(--bg);
+		border-color: var(--accent);
+	}
+
+	/* 快捷按钮 */
+	.yard__quick {
+		margin-top: 10px;
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+
+	.yard__quick-btn {
+		padding: 8px 14px;
+		background: transparent;
+		color: var(--fg);
+		border: 1px solid var(--grid-line);
+		border-radius: 0;
+		font: 700 12px/1 var(--font-sans);
+		cursor: pointer;
+		transition: color 0.15s ease, border-color 0.15s ease;
+	}
+
+	.yard__quick-btn:hover {
+		color: var(--accent);
+		border-color: var(--accent);
+	}
+
+	.yard__quick-btn.is-done {
+		color: var(--fg-muted);
+		text-decoration: line-through;
+		text-decoration-color: var(--fg-muted);
+	}
+
+	/* ===== 反馈 / 操作 ===== */
+	.yard__feedback {
+		margin: 12px 0 0;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.06em;
+		color: var(--fg-muted);
+		min-height: 1em;
+	}
+
+	.yard__feedback.is-error {
+		color: var(--accent);
+	}
+
+	.yard__actions {
+		margin-top: 14px;
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+
+	.yard__hint,
+	.yard__reset {
+		padding: 9px 16px;
+		background: transparent;
+		color: var(--fg-muted);
+		border: 1px solid var(--grid-line);
+		border-radius: 0;
+		font: 700 11px/1 var(--font-mono);
+		letter-spacing: 0.12em;
+		cursor: pointer;
+		transition: color 0.15s ease, border-color 0.15s ease;
+	}
+
+	.yard__hint:hover,
+	.yard__reset:hover {
+		color: var(--accent);
+		border-color: var(--accent);
+	}
+
+	/* ===== 奖励 ===== */
+	.yard__reward {
+		margin-top: 16px;
+		padding: 16px 18px;
+		border: var(--line) dashed var(--accent);
+		background-color: var(--bg-alt);
+		background-image: var(--texture-rect);
+		background-size: 56px 56px;
+	}
+
+	.yard__reward[hidden] {
+		display: none;
+	}
+
+	.yard__reward-inner {
+		font-size: 14px;
+		line-height: 2;
+		min-height: 1em;
+	}
+
+	.yard__reward-inner p {
+		margin: 0 0 0.6em;
+	}
+
+	.yard__reward-inner p:last-child {
+		margin-bottom: 0;
+	}
+</style>
+
+<script>
+	import { storageKey, loadSolved, typewrite, findCommand } from '../lib/puzzle';
+
+	document.querySelectorAll<HTMLElement>('.yard').forEach((section) => {
+		const huntId = section.dataset.yardId ?? '';
+		const places = JSON.parse(section.dataset.places ?? '[]') as {
+			label: string;
+			keywords: string[];
+			textHtml: string;
+		}[];
+		if (!huntId || !Array.isArray(places) || places.length === 0) return;
+
+		const key = storageKey(huntId);
+		const texts = JSON.parse(section.dataset.texts ?? '{}') as {
+			hint?: string;
+			wrong?: string;
+			fallback?: string;
+		};
+		const logEl = section.querySelector<HTMLElement>('[data-role="log"]');
+		const progressEl = section.querySelector<HTMLElement>('[data-role="progress"]');
+		const inputEl = section.querySelector<HTMLInputElement>('[data-role="input"]');
+		const cmdForm = section.querySelector<HTMLElement>('[data-role="cmd"]');
+		const feedbackEl = section.querySelector<HTMLElement>('[data-role="feedback"]');
+		const rewardEl = section.querySelector<HTMLElement>('[data-role="reward"]');
+		const hintBtn = section.querySelector<HTMLElement>('[data-role="hint"]');
+		const resetEl = section.querySelector<HTMLElement>('[data-role="reset"]');
+		const quickBtns = Array.from(section.querySelectorAll<HTMLButtonElement>('[data-role="quick"]'));
+
+		// 已探索的地点（按下标升序）
+		let done = loadSolved(key)
+			.filter((i) => i >= 0 && i < places.length)
+			.sort((a, b) => a - b);
+
+		const persist = () => {
+			try {
+				localStorage.setItem(key, JSON.stringify(done));
+			} catch {
+				/* ignore */
+			}
+		};
+
+		const appendEntry = (i: number, typed: boolean) => {
+			if (!logEl) return;
+			const entry = document.createElement('div');
+			entry.className = 'yard__entry';
+			const label = document.createElement('span');
+			label.className = 'yard__entry-label';
+			label.textContent = places[i].label;
+			const text = document.createElement('p');
+			text.className = 'yard__entry-text';
+			// 用模板节点取纯文本（去掉 markdown 渲染出的标签）
+			const tmp = document.createElement('div');
+			tmp.innerHTML = places[i].textHtml;
+			const plain = tmp.textContent ?? '';
+			entry.append(label, text);
+			logEl.appendChild(entry);
+			if (typed) {
+				const finish = typewrite(text, plain, 22);
+				text.addEventListener('click', () => finish(), { once: true });
+			} else {
+				text.textContent = plain;
+			}
+		};
+
+		const refresh = () => {
+			done.forEach((i) => {
+				appendEntry(i, false);
+				const btn = quickBtns[i];
+				if (btn) btn.classList.add('is-done');
+			});
+			if (progressEl) progressEl.textContent = `已探索 ${done.length} / ${places.length}`;
+			if (rewardEl) {
+				const all = done.length === places.length;
+				rewardEl.hidden = !all;
+				if (all) {
+					const inner = rewardEl.querySelector<HTMLElement>('.yard__reward-inner');
+					if (inner && !rewardEl.dataset.typed) {
+						rewardEl.dataset.typed = '1';
+						const plain = inner.textContent ?? '';
+						inner.textContent = '';
+						const finish = typewrite(inner, plain, 30);
+						inner.addEventListener('click', () => finish(), { once: true });
+					}
+				}
+			}
+			window.dispatchEvent(
+				new CustomEvent('daosu:puzzle-update', {
+					detail: { kind: 'hunt', id: huntId, solved: done.length, total: places.length },
+				})
+			);
+		};
+
+		const act = (i: number) => {
+			if (done.includes(i)) return;
+			const next = done.length;
+			if (i === next) {
+				done.push(i);
+				persist();
+				appendEntry(i, true);
+				if (feedbackEl) {
+					feedbackEl.textContent = '';
+					feedbackEl.classList.remove('is-error');
+				}
+				const btn = quickBtns[i];
+				if (btn) btn.classList.add('is-done');
+				if (progressEl) progressEl.textContent = `已探索 ${done.length} / ${places.length}`;
+				if (rewardEl && done.length === places.length) {
+					const all = done.length === places.length;
+					rewardEl.hidden = !all;
+					const inner = rewardEl.querySelector<HTMLElement>('.yard__reward-inner');
+					if (inner) {
+						const plain = inner.textContent ?? '';
+						inner.textContent = '';
+						const finish = typewrite(inner, plain, 30);
+						inner.addEventListener('click', () => finish(), { once: true });
+					}
+				}
+				window.dispatchEvent(
+					new CustomEvent('daosu:puzzle-update', {
+						detail: { kind: 'hunt', id: huntId, solved: done.length, total: places.length },
+					})
+				);
+			} else if (feedbackEl) {
+				feedbackEl.textContent =
+					texts.wrong ?? '还不到时候。按着顺序来——从墙头开始。';
+				feedbackEl.classList.add('is-error');
+			}
+		};
+
+		const runCommand = (v: string) => {
+			const i = findCommand(v, places);
+			if (i === -1) {
+				if (feedbackEl) {
+					feedbackEl.textContent =
+						texts.fallback ?? '后院没有那样东西。你环顾四周：一堵墙、一棵老槐、一池水、一张石桌。';
+					feedbackEl.classList.add('is-error');
+				}
+				return;
+			}
+			act(i);
+		};
+
+		if (cmdForm) {
+			cmdForm.addEventListener('submit', (e) => {
+				e.preventDefault();
+				if (!inputEl) return;
+				runCommand(inputEl.value);
+				inputEl.value = '';
+			});
+		}
+
+		quickBtns.forEach((btn) => {
+			btn.addEventListener('click', () => act(Number(btn.dataset.place)));
+		});
+
+		if (hintBtn) {
+			hintBtn.addEventListener('click', () => {
+				if (!feedbackEl) return;
+				if (done.length >= places.length) {
+					feedbackEl.textContent = '已经找齐了。';
+					feedbackEl.classList.remove('is-error');
+					return;
+				}
+				const rest = places
+					.map((p, i) => (done.includes(i) ? null : p.label))
+					.filter((x): x is string => x !== null);
+				feedbackEl.textContent =
+					texts.hint ?? `从墙头开始，一样一样找下去。还没看的：${rest.join('、')}。`;
+				feedbackEl.classList.remove('is-error');
+			});
+		}
+
+		if (resetEl) {
+			resetEl.addEventListener('click', () => {
+				done = [];
+				try {
+					localStorage.removeItem(key);
+				} catch {
+					/* ignore */
+				}
+				if (logEl) logEl.innerHTML = '';
+				quickBtns.forEach((btn) => btn.classList.remove('is-done'));
+				if (rewardEl) {
+					rewardEl.hidden = true;
+					delete rewardEl.dataset.typed;
+				}
+				if (feedbackEl) {
+					feedbackEl.textContent = '';
+					feedbackEl.classList.remove('is-error');
+				}
+				if (progressEl) progressEl.textContent = `已探索 0 / ${places.length}`;
+				window.dispatchEvent(
+					new CustomEvent('daosu:puzzle-update', {
+						detail: { kind: 'hunt', id: huntId, solved: 0, total: places.length },
+					})
+				);
+			});
+		}
+
+		refresh();
+	});
+</script>

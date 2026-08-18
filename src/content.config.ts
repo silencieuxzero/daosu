@@ -42,6 +42,7 @@ const guests = defineCollection({
     quote: z.string().optional(),   // 语录
     source: z.string().optional(),  // 档案来源（wiki 页面名）
     order: z.number().default(99),  // 展示顺序
+    hidden: z.boolean().default(false), // 隐藏茶客（谜题彩蛋）：默认不出现在茶客列表，解锁后显示
     puzzle: z
       .object({
         question: z.string(),          // 谜题问题

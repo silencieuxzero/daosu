@@ -30,6 +30,7 @@ export const nav = {
 			items: [
 				{ label: '茶客设定', href: '/guests' },
 				{ label: '茶馆故事', href: '/stories' },
+				{ label: '谜题间', href: '/puzzle-room' },
 				{ label: '多媒体库', href: '/media' },
 			],
 		},
